@@ -1,27 +1,32 @@
 // @ts-nocheck
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Image, Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Header from '../../components/header';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
 import { useCart } from "../../context/CartContext";
 
 const BASE_URL = 'http://localhost:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001'; // for images served from Frappe backend
+const FRAPPE_URL = 'http://192.168.29.141:8000'; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
-function ProductCard({ p, cart, likedMap, onLike, onIncrease, onDecrease, onInfo }) {
+// @ts-nocheck
+
+
+function ProductCard({ p, cart, liked, onLike, onIncrease, onDecrease, onInfo }) {
   const qty = cart[p.item_code]?.qty || 0;
 
   return (
     <View style={styles.productCard}>
       <View style={styles.productImgWrap}>
         {p.image ? (
-          <Image source={{ uri: p.image.startsWith('http') ? p.image : `${FRAPPE_URL}/${p.image}` }} style={styles.productImg} resizeMode="contain" />
+            <Image
+              source={{ uri: p.image.startsWith('http') ? p.image : `${FRAPPE_URL}/${p.image}` }}
+              style={styles.productImg}
+              resizeMode="contain"
+            />
         ) : (
           <Text style={styles.productEmoji}>{p.emoji}</Text>
         )}
@@ -33,37 +38,46 @@ function ProductCard({ p, cart, likedMap, onLike, onIncrease, onDecrease, onInfo
       </View>
 
       <TouchableOpacity
-        style={[styles.heartBtn, likedMap[p.item_code] && styles.heartBtnLiked]}
+        style={[styles.heartBtn, liked[p.item_code] && styles.heartBtnLiked]}
         onPress={() => onLike(p.item_code)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text style={styles.heartBtnText}>{likedMap[p.item_code] ? '❤️' : '🤍'}</Text>
+        <Text style={styles.heartBtnText}>{liked[p.item_code] ? '❤️' : '🤍'}</Text>
       </TouchableOpacity>
 
       <View style={styles.productBody}>
-        <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
-        <Text style={styles.productPrice}>${(p.price || 0).toFixed(2)} <Text style={styles.productUnit}>/ {p.unit}</Text></Text>
+        <View style={styles.productBodyInner}>
+          <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
+          <Text style={styles.productPrice}>
+            ${(p.price || 0).toFixed(2)}{' '}
+            <Text style={styles.productUnit}>/ {p.unit}</Text>
+          </Text>
+        </View>
 
-        {p.stock <= 0 ? (
-          <View style={[styles.addBtn, styles.addBtnDisabled]}>
-            <Text style={styles.addBtnDisabledText}>Out of Stock</Text>
-          </View>
-        ) : qty === 0 ? (
-          <TouchableOpacity style={styles.addBtn} onPress={() => onIncrease(p)}>
-            <Text style={styles.addBtnText}>Add to Cart</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.qtyRow}>
-            <TouchableOpacity style={styles.qtyBtn} onPress={() => onDecrease(p)}>
-              <Text style={styles.qtyBtnText}>−</Text>
+        {!p.in_stock && p.in_stock !== undefined ? (
+            <View style={[styles.addBtn, styles.addBtnDisabled]}>
+              <Text style={styles.addBtnDisabledText}>Out of Stock</Text>
+            </View>
+          ) : p.stock <= 0 ? (
+            <View style={[styles.addBtn, styles.addBtnDisabled]}>
+              <Text style={styles.addBtnDisabledText}>Out of Stock</Text>
+            </View>
+          ) : qty === 0 ? (
+            <TouchableOpacity style={styles.addBtn} onPress={() => onIncrease(p)}>
+              <Text style={styles.addBtnText}>Add to Cart</Text>
             </TouchableOpacity>
-            <Text style={styles.qtyValue}>{qty}</Text>
-            <TouchableOpacity style={[styles.qtyBtn, qty >= p.stock && styles.qtyBtnDisabled]} onPress={() => onIncrease(p)} disabled={qty >= p.stock}>
-              <Text style={styles.qtyBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+          ) : (
+            <View style={styles.qtyRow}>
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => onDecrease(p)}>
+                <Text style={styles.qtyBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.qtyValue}>{qty}</Text>
+              <TouchableOpacity style={[styles.qtyBtn, qty >= p.stock && styles.qtyBtnDisabled]} onPress={() => onIncrease(p)} disabled={qty >= p.stock}>
+                <Text style={styles.qtyBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
     </View>
   );
 }
@@ -244,13 +258,13 @@ export default function WishlistScreen() {
             keyExtractor={p => p.item_code}
             renderItem={({ item }) => (
               <View style={{ width: CARD_WIDTH }}>
-                <ProductCard p={item} cart={cart} likedMap={likedMap} onLike={toggleLike} onIncrease={increaseQty} onDecrease={decreaseQty} onInfo={setSelectedNutrition} />
+                <ProductCard p={item} cart={cart} liked={likedMap} onLike={toggleLike} onIncrease={increaseQty} onDecrease={decreaseQty} onInfo={setSelectedNutrition} />
               </View>
             )}
           />
         )}
 
-        <TouchableOpacity style={styles.checkoutBtn} onPress={goToCheckout}><Text style={styles.checkoutBtnText}>Go to Checkout</Text></TouchableOpacity>
+        {/* <TouchableOpacity style={styles.checkoutBtn} onPress={goToCheckout}><Text style={styles.checkoutBtnText}>Go to Checkout</Text></TouchableOpacity> */}
       </View>
 
       <NutritionModal product={selectedNutrition} visible={!!selectedNutrition} onClose={() => setSelectedNutrition(null)} />
@@ -272,18 +286,23 @@ const styles = StyleSheet.create({
   // Product card styles (borrowed from Home)
   productCard: {
     backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e3e6',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    // keep cards aligned with home
+    minHeight: 300,
+    justifyContent: 'space-between',
   },
   productImgWrap: { aspectRatio: 1, backgroundColor: '#f8fafb', justifyContent: 'center', alignItems: 'center', position: 'relative', padding: 8 },
   productImg: { width: '100%', height: '100%', borderRadius: 10 },
   productEmoji: { fontSize: 50 },
   infoBtn: { position: 'absolute', bottom: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#2f8b3a', justifyContent: 'center', alignItems: 'center' },
   infoBtnText: { color: '#fff', fontWeight: '700', fontSize: 12, fontStyle: 'italic' },
-  heartBtn: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  heartBtn: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center', zIndex: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
   heartBtnLiked: { backgroundColor: '#FFF0F0' },
   heartBtnText: { fontSize: 15 },
   productBody: { padding: 10 },
-  productName: { fontSize: 13, fontWeight: '600', color: '#1A1A2E', marginBottom: 4 },
+  // ensure body has consistent space for title/price/actions
+  productBodyInner: { minHeight: 92 },
+  productName: { fontSize: 13, fontWeight: '600', color: '#1A1A2E', marginBottom: 4, lineHeight: 18 },
   productPrice: { fontSize: 15, fontWeight: '700', color: '#2f8b3a', marginBottom: 8 },
   productUnit: { fontSize: 11, fontWeight: '400', color: '#6b7176' },
   addBtn: { backgroundColor: '#2f8b3a', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },

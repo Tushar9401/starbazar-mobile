@@ -1,23 +1,22 @@
 // @ts-nocheck
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useCart } from "../../context/CartContext";
 
@@ -430,7 +429,7 @@ const styles = StyleSheet.create({
   catBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: WHITE, borderRadius: 20, borderWidth: 1, borderColor: BORDER_COLOR, marginRight: 8 },
   catBtnActive: { backgroundColor: ACCENT, borderColor: ACCENT },
   catText: { color: DARK }, catTextActive: { color: WHITE },
-  productCard: { backgroundColor: WHITE, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: BORDER_COLOR, marginBottom: 12 },
+  productCard: { backgroundColor: WHITE, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: BORDER_COLOR, marginBottom: 12, minHeight: 300, justifyContent: 'space-between' },
   productImgWrap: { aspectRatio: 1, backgroundColor: PAGE_BG, justifyContent: 'center', alignItems: 'center', position: 'relative', padding: 8 },
   productImg: { width: '100%', height: '100%', borderRadius: 10 },
   productEmoji: { fontSize: 42 },
@@ -439,6 +438,7 @@ const styles = StyleSheet.create({
   heartBtn: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   heartBtnLiked: { backgroundColor: '#FFF0F0' }, heartBtnText: { fontSize: 15 },
   productBody: { padding: 10 },
+  productBodyInner: { minHeight: 92 },
   productName: { fontSize: 13, fontWeight: '600', color: DARK, marginBottom: 6 },
   productPrice: { fontSize: 15, fontWeight: '700', color: ACCENT, marginBottom: 12 },
   productUnit: { fontSize: 11, color: MUTED },

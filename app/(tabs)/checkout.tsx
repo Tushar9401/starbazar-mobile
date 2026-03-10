@@ -2,28 +2,27 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import { useCart } from '../../context/CartContext';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    KeyboardAvoidingView,
-    Linking,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Header from '../../components/header';
+import { useCart } from '../../context/CartContext';
 
 const BASE_URL = 'http://localhost:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001';
+const FRAPPE_URL = 'http://192.168.29.141:8000';
 const { width } = Dimensions.get('window');
 
 const ACCENT = '#2f8b3a';
@@ -46,15 +45,39 @@ export default function CheckoutScreen() {
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '', address: '', city: '', zipCode: '',
-    cardNumber: '', cardExpiry: '', cardCVV: '', deliveryMethod: 'home', deliveryOption: 'standard', billingSame: true,
+    cardNumber: '', cardExpiry: '', cardCVV: '', deliveryMethod: 'pickup', deliveryOption: 'standard', billingSame: true,
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  // cached logged-in user info from AsyncStorage (if available)
+  const [storedUser, setStoredUser] = useState({ firstName: '', lastName: '', email: '' });
 
   // load cart from AsyncStorage on mount
   useEffect(() => {
+    // load logged-in user info (if any) so we can prefill customer fields when placing orders
+    const loadUser = async () => {
+      try {
+        const username = await AsyncStorage.getItem('username');
+        const email = await AsyncStorage.getItem('email');
+
+        let firstName = '';
+        let lastName = '';
+        if (username) {
+          const parts = username.trim().split(/\s+/);
+          firstName = parts.shift() || '';
+          lastName = parts.join(' ') || '';
+        }
+
+        setStoredUser({ firstName, lastName, email: email || '' });
+        // also prefill formData when available
+        setFormData(f => ({ ...f, firstName: firstName || f.firstName, lastName: lastName || f.lastName, email: email || f.email }));
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadUser();
     const loadOffers = async () => {
       try {
         const offersRes = await axios.get(`${BASE_URL}/api/pricing-offers/`);
@@ -225,21 +248,45 @@ export default function CheckoutScreen() {
   }
 
   const handlePlaceOrder = async () => {
+    console.log('handlePlaceOrder called, step=', step, 'submitting=', submitting);
     // only final submit on step 2 (Review) in the new 2-step flow
     if (step !== 2) { setStep(2); return; }
 
-    if (!formData.firstName || !formData.lastName || !formData.email) {
+    // Require name/email for non-pickup orders, but allow pickup orders to place without them.
+    if (formData.deliveryMethod !== 'pickup' && (!formData.firstName || !formData.lastName || !formData.email)) {
+      console.log('Order blocked: missing customer info', { formData });
       Alert.alert('Missing info', 'Please fill name and email');
       return;
     }
 
     if (cartArr.length === 0) { Alert.alert('Cart empty', 'Add items before ordering'); return; }
-
+    // console.log('Placing order with data:', { formData, cartArr, tax });
     setSubmitting(true);
     try {
-      const items = cartArr.map(ci => ({ item_code: ci.item.item_code, qty: ci.qty, name: ci.item.item_name, original_price: ci.item.price, amount: (ci.qty * Number(ci.item.price || 0)) }));
-      const payload = { customer_name: `${formData.firstName} ${formData.lastName}`, email: formData.email, items, tax, order_id: Date.now().toString() };
+      console.log('Placing order with data:', { formData, cartArr, tax });
+      // Build items with explicit numeric prices/amounts (use getItemTotal to respect offers)
+      const items = cartArr.map(ci => {
+        const unit = Number(ci.item.price || 0);
+        const qty = Number(ci.qty || 0);
+        const lineAmount = Number(getItemTotal(ci));
+        return {
+          item_code: ci.item.item_code,
+          qty,
+          name: ci.item.item_name,
+          original_price: unit,
+          amount: lineAmount,
+        };
+      });
+
+  const customerFirst = storedUser.firstName || formData.firstName || '';
+  const customerLast = storedUser.lastName || formData.lastName || '';
+  const customerEmail = storedUser.email || formData.email || '';
+  const payload = { customer_name: `${customerFirst} ${customerLast}`.trim(), email: customerEmail, items, tax, order_id: Date.now().toString() };
+      // debug payload shape
+      console.log('Order payload:', JSON.stringify(payload, null, 2));
+      // Call the local create_sales_invoice endpoint
       const res = await axios.post(`${BASE_URL}/api/create-sales-invoice/`, payload);
+      console.log(payload, res.data);
       const invoice = res.data?.invoice || ('ORD' + Date.now());
       setOrderNumber(invoice);
       setOrderPlaced(true);
@@ -320,9 +367,11 @@ export default function CheckoutScreen() {
             <View>
               {/* Top toggle for Delivery vs Pickup */}
               <View style={[styles.selectorWrap, { marginBottom: 12 }]}> 
+                {/*
                 <TouchableOpacity style={[styles.selectorBtn, formData.deliveryMethod === 'home' && styles.selectorBtnActive]} onPress={() => setFormData(f => ({ ...f, deliveryMethod: 'home' }))}>
                   <Text style={formData.deliveryMethod === 'home' ? styles.selectorTextActive : styles.selectorText}>Home Delivery</Text>
                 </TouchableOpacity>
+                */}
                 <TouchableOpacity style={[styles.selectorBtn, formData.deliveryMethod === 'pickup' && styles.selectorBtnActive]} onPress={() => setFormData(f => ({ ...f, deliveryMethod: 'pickup' }))}>
                   <Text style={formData.deliveryMethod === 'pickup' ? styles.selectorTextActive : styles.selectorText}>Pickup</Text>
                 </TouchableOpacity>
@@ -330,62 +379,66 @@ export default function CheckoutScreen() {
 
               <View style={[styles.section, isWide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
                 <View style={{ flex: 1, marginRight: isWide ? 12 : 0 }}>
-                  {/* Delivery form or Pickup card */}
-                  {formData.deliveryMethod === 'home' ? (
-                    <>
-                      <Text style={styles.sectionTitle}>Delivery Information</Text>
-                      <View style={{ flexDirection: 'row' }}>
-                        <TextInput placeholder="First name" value={formData.firstName} onChangeText={t => setFormData(f => ({ ...f, firstName: t }))} style={[styles.input, { flex: 1, marginRight: 8 }]} />
-                        <TextInput placeholder="Last name" value={formData.lastName} onChangeText={t => setFormData(f => ({ ...f, lastName: t }))} style={[styles.input, { flex: 1 }]} />
+                  {/* Delivery Information (hidden) - kept here as commented reference for future restore
+                  <Text style={styles.sectionTitle}>Delivery Information</Text>
+                  <View style={{ flexDirection: 'row' }}>
+                    <TextInput placeholder="First name" value={formData.firstName} onChangeText={t => setFormData(f => ({ ...f, firstName: t }))} style={[styles.input, { flex: 1, marginRight: 8 }]} />
+                    <TextInput placeholder="Last name" value={formData.lastName} onChangeText={t => setFormData(f => ({ ...f, lastName: t }))} style={[styles.input, { flex: 1 }]} />
+                  </View>
+                  <TextInput placeholder="Email address" keyboardType="email-address" value={formData.email} onChangeText={t => setFormData(f => ({ ...f, email: t }))} style={styles.input} />
+                  <TextInput placeholder="Phone number" keyboardType="phone-pad" value={formData.phone} onChangeText={t => setFormData(f => ({ ...f, phone: t }))} style={styles.input} />
+                  <TextInput placeholder="Street address" value={formData.address} onChangeText={t => setFormData(f => ({ ...f, address: t }))} style={styles.input} />
+                  <View style={{ flexDirection: 'row' }}>
+                    <TextInput placeholder="City" value={formData.city} onChangeText={t => setFormData(f => ({ ...f, city: t }))} style={[styles.input, { flex: 1, marginRight: 8 }]} />
+                    <TextInput placeholder="ZIP code" value={formData.zipCode} onChangeText={t => setFormData(f => ({ ...f, zipCode: t }))} style={[styles.input, { width: 120 }]} />
+                  </View>
+                  */}
+
+                  <View>
+                    <Text style={styles.sectionTitle}>Pickup</Text>
+                    <View style={styles.pickupMapWrap}>
+                      <View style={styles.mapPreview}>
+                        {/* Render native WebView on iOS/Android when available. For web or when
+                            `react-native-webview` isn't installed we keep a harmless placeholder
+                            so the web bundle doesn't fail. */}
+                        {NativeWebView ? (
+                          <NativeWebView
+                            originWhitelist={["*"]}
+                            source={{ uri: MAPS_EMBED }}
+                            style={{ flex: 1, width: '100%' }}
+                            automaticallyAdjustContentInsets={false}
+                          />
+                        ) : (
+                          <View style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ color: MUTED }}>Map preview</Text>
+                          </View>
+                        )}
                       </View>
-                      <TextInput placeholder="Email address" keyboardType="email-address" value={formData.email} onChangeText={t => setFormData(f => ({ ...f, email: t }))} style={styles.input} />
-                      <TextInput placeholder="Phone number" keyboardType="phone-pad" value={formData.phone} onChangeText={t => setFormData(f => ({ ...f, phone: t }))} style={styles.input} />
-                      <TextInput placeholder="Street address" value={formData.address} onChangeText={t => setFormData(f => ({ ...f, address: t }))} style={styles.input} />
-                      <View style={{ flexDirection: 'row' }}>
-                        <TextInput placeholder="City" value={formData.city} onChangeText={t => setFormData(f => ({ ...f, city: t }))} style={[styles.input, { flex: 1, marginRight: 8 }]} />
-                        <TextInput placeholder="ZIP code" value={formData.zipCode} onChangeText={t => setFormData(f => ({ ...f, zipCode: t }))} style={[styles.input, { width: 120 }]} />
+                      <TouchableOpacity style={styles.mapBtn} onPress={() => Linking.openURL(MAPS_URL)}>
+                        <Text style={styles.mapBtnText}>📍 View Full Map</Text>
+                      </TouchableOpacity>
+                      <View style={styles.pickupCardInner}>
+                        <Text style={styles.cardTitle}>Star Bazaar</Text>
+                        <Text style={styles.mutedText}>1603 W Palmetto St, Florence, SC 29501, USA</Text>
+                        <TouchableOpacity onPress={() => Linking.openURL('tel:+18437991099')}>
+                          <Text style={[styles.mutedText, { color: ACCENT, marginTop: 8 }]}>+1 (843) 799-1099</Text>
+                        </TouchableOpacity>
+                        <Text style={[styles.mutedText, { marginTop: 6 }]}>Mon-Sun: 10:00 AM - 8:00 PM</Text>
                       </View>
 
-                      {/* Delivery options removed per request */}
-                    </>
-                  ) : (
-                    <View>
-                      <Text style={styles.sectionTitle}>Pickup</Text>
-                      <View style={styles.pickupMapWrap}>
-                        <View style={styles.mapPreview}>
-                          {/* Render native WebView on iOS/Android when available. For web or when
-                              `react-native-webview` isn't installed we keep a harmless placeholder
-                              so the web bundle doesn't fail. */}
-                          {NativeWebView ? (
-                            <NativeWebView
-                              originWhitelist={["*"]}
-                              source={{ uri: MAPS_EMBED }}
-                              style={{ flex: 1, width: '100%' }}
-                              automaticallyAdjustContentInsets={false}
-                            />
-                          ) : (
-                            <View style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                              <Text style={{ color: MUTED }}>Map preview</Text>
-                            </View>
-                          )}
-                        </View>
-                        <TouchableOpacity style={styles.mapBtn} onPress={() => Linking.openURL(MAPS_URL)}>
-                          <Text style={styles.mapBtnText}>📍 View Full Map</Text>
-                        </TouchableOpacity>
-                        <View style={styles.pickupCardInner}>
-                          <Text style={styles.cardTitle}>Star Bazaar</Text>
-                          <Text style={styles.mutedText}>1603 W Palmetto St, Florence, SC 29501, USA</Text>
-                          <TouchableOpacity onPress={() => Linking.openURL('tel:+18437991099')}>
-                            <Text style={[styles.mutedText, { color: ACCENT, marginTop: 8 }]}>+1 (843) 799-1099</Text>
-                          </TouchableOpacity>
-                          <Text style={[styles.mutedText, { marginTop: 6 }]}>Mon-Sun: 10:00 AM - 8:00 PM</Text>
+                      {/* Compact total shown for pickup as its own separator to avoid overlap */}
+                      <View style={{ width: '100%', marginTop: 12, borderTopWidth: 1, borderTopColor: BORDER_COLOR, paddingTop: 10 }}>
+                        <View style={styles.summaryRow}>
+                          <Text style={{ fontWeight: '700' }}>Total</Text>
+                          <Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text>
                         </View>
                       </View>
                     </View>
-                  )}
+                  </View>
                 </View>
 
                 <View style={{ flex: 1, marginTop: isWide ? 0 : 28, alignSelf: 'stretch' }}>
+                  {/*
                   <Text style={[styles.sectionTitle, { marginTop: 6 }]}>Payment Information</Text>
                   <Text style={{ fontWeight: '700', marginTop: 6, marginBottom: 6 }}>Card Details</Text>
                   <TextInput placeholder="Card number" value={formData.cardNumber} onChangeText={t => setFormData(f => ({ ...f, cardNumber: t }))} style={styles.input} keyboardType="number-pad" />
@@ -393,15 +446,24 @@ export default function CheckoutScreen() {
                     <TextInput placeholder="MM/YY" value={formData.cardExpiry} onChangeText={t => setFormData(f => ({ ...f, cardExpiry: t }))} style={[styles.input, { flex: 1, marginRight: 8 }]} />
                     <TextInput placeholder="CVV" value={formData.cardCVV} onChangeText={t => setFormData(f => ({ ...f, cardCVV: t }))} style={[styles.input, { width: 120 }]} keyboardType="number-pad" />
                   </View>
-                  {/* Billing-address toggle removed per request */}
+                  
+                  */}
 
-                  <View style={[styles.orderCard, { marginTop: 12 }]}> 
-                    <View style={styles.summaryRow}><Text style={{ fontWeight: '700' }}>Total</Text><Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text></View>
-                  </View>
+                  {formData.deliveryMethod !== 'pickup' && (
+                    <View style={[styles.orderCard, { marginTop: 12 }]}> 
+                      <View style={styles.summaryRow}><Text style={{ fontWeight: '700' }}>Total</Text><Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text></View>
+                    </View>
+                  )}
 
-                  <TouchableOpacity style={styles.primaryBtn} onPress={next}><Text style={styles.primaryBtnText}>Review Order →</Text></TouchableOpacity>
+                  {/* Button intentionally moved below the two-column section so it doesn't overlap
+                      the pickup map / address card on narrow screens. */}
                 </View>
               </View>
+
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={next}>
+                <Text style={styles.primaryBtnText}>Review Order →</Text>
+              </TouchableOpacity>
+
             </View>
           )}
           {step === 2 && (
@@ -505,7 +567,17 @@ export default function CheckoutScreen() {
                 <View style={styles.summaryRow}><Text style={{ fontWeight: '700' }}>Total</Text><Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text></View>
               </View>
 
-              <TouchableOpacity style={[styles.placeBtn, { marginTop: 16 }]} onPress={handlePlaceOrder}><Text style={styles.placeBtnText}>Place Order - ${total.toFixed(2)}</Text></TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.placeBtn, { marginTop: 16, opacity: submitting ? 0.6 : 1 }]}
+                onPress={() => { console.log('Place Order button pressed'); handlePlaceOrder(); }}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color={WHITE} />
+                ) : (
+                  <Text style={styles.placeBtnText}>Place Order - ${total.toFixed(2)}</Text>
+                )}
+              </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtn} onPress={back}><Text style={styles.secondaryBtnText}>Back to Details</Text></TouchableOpacity>
             </View>
           )}
@@ -542,11 +614,13 @@ const styles = StyleSheet.create({
   section: { marginTop: 12, backgroundColor: WHITE, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: BORDER_COLOR, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12, color: DARK },
   input: { backgroundColor: PAGE_BG, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: BORDER_COLOR, marginTop: 8 },
-  primaryBtn: { backgroundColor: ACCENT, paddingVertical: 14, borderRadius: 10, marginTop: 16, alignItems: 'center', shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 2 },
+  primaryBtn: { backgroundColor: ACCENT, paddingVertical: 14, borderRadius: 10, marginTop: 16, alignItems: 'center', shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 2, width: '100%' },
   primaryBtnText: { color: WHITE, fontWeight: '800', fontSize: 16 },
   secondaryBtn: { backgroundColor: '#F0F3F5', paddingVertical: 12, borderRadius: 10, marginTop: 12, alignItems: 'center' },
   secondaryBtnText: { color: MUTED, fontWeight: '700' },
-  orderCard: { backgroundColor: 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 12 },
+  placeBtn: { backgroundColor: ACCENT, paddingVertical: 14, borderRadius: 10, alignItems: 'center', width: '100%', shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 2 },
+  placeBtnText: { color: WHITE, fontWeight: '800', fontSize: 16 },
+  orderCard: { backgroundColor: 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 12, elevation: 2, zIndex: 2 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
   summaryDivider: { height: 1, backgroundColor: BORDER_COLOR, marginVertical: 8 },
   tabBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: BORDER_COLOR, backgroundColor: WHITE, alignItems: 'center' },
@@ -564,10 +638,10 @@ const styles = StyleSheet.create({
   radioDotActive: { backgroundColor: ACCENT, borderColor: ACCENT },
   mutedText: { color: MUTED, marginTop: 2 },
   pickupMapWrap: { backgroundColor: 'rgba(255,255,255,0.95)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(47,139,58,0.12)', alignItems: 'center', marginBottom: 18 },
-  mapPreview: { width: '100%', height: 160, backgroundColor: '#eef6ef', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  mapPreview: { width: '100%', height: 200, backgroundColor: '#eef6ef', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
   mapBtn: { backgroundColor: ACCENT, paddingVertical: 12, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10 },
   mapBtnText: { color: WHITE, fontWeight: '800' },
-  pickupCardInner: { backgroundColor: WHITE, padding: 12, borderRadius: 8, width: '100%', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
+  pickupCardInner: { backgroundColor: WHITE, padding: 12, borderRadius: 8, width: '100%', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)', marginBottom: 12, paddingBottom: 8 },
   selectorWrap: { flexDirection: 'row', backgroundColor: 'transparent', borderRadius: 12, overflow: 'hidden' },
   selectorBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: BORDER_COLOR, backgroundColor: WHITE },
   selectorBtnActive: { backgroundColor: ACCENT, borderColor: ACCENT },

@@ -1,29 +1,28 @@
-import { emitCart } from '@/utils/cartEvents';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    ImageBackground,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  ImageBackground,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useCart } from "../../context/CartContext";
 import Header from '../../components/header';
+import { useCart } from "../../context/CartContext";
 
 const BASE_URL = 'http://localhost:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001'; // for images served from Frappe backend
+const FRAPPE_URL = 'http://192.168.29.141:8000'; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
@@ -94,36 +93,34 @@ function ProductCard({ p, cart, liked, onLike, onIncrease, onDecrease, onInfo })
       </TouchableOpacity>
 
       <View style={styles.productBody}>
-        <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
-        <Text style={styles.productPrice}>
-          ${p.price.toFixed(2)}{' '}
-          <Text style={styles.productUnit}>/ {p.unit}</Text>
-        </Text>
+        <View style={styles.productBodyInner}>
+          <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
+          <Text style={styles.productPrice}>
+            ${p.price.toFixed(2)}{' '}
+            <Text style={styles.productUnit}>/ {p.unit}</Text>
+          </Text>
+        </View>
 
         {!p.in_stock ? (
-          <View style={[styles.addBtn, styles.addBtnDisabled]}>
-            <Text style={styles.addBtnDisabledText}>Out of Stock</Text>
-          </View>
-        ) : qty === 0 ? (
-          <TouchableOpacity style={styles.addBtn} onPress={() => onIncrease(p)}>
-            <Text style={styles.addBtnText}>Add to Cart</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.qtyRow}>
-            <TouchableOpacity style={styles.qtyBtn} onPress={() => onDecrease(p)}>
-              <Text style={styles.qtyBtnText}>−</Text>
+            <View style={[styles.addBtn, styles.addBtnDisabled]}>
+              <Text style={styles.addBtnDisabledText}>Out of Stock</Text>
+            </View>
+          ) : qty === 0 ? (
+            <TouchableOpacity style={styles.addBtn} onPress={() => onIncrease(p)}>
+              <Text style={styles.addBtnText}>Add to Cart</Text>
             </TouchableOpacity>
-            <Text style={styles.qtyValue}>{qty}</Text>
-            <TouchableOpacity
-              style={[styles.qtyBtn, qty >= p.stock && styles.qtyBtnDisabled]}
-              onPress={() => onIncrease(p)}
-              disabled={qty >= p.stock}
-            >
-              <Text style={styles.qtyBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+          ) : (
+            <View style={styles.qtyRow}>
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => onDecrease(p)}>
+                <Text style={styles.qtyBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.qtyValue}>{qty}</Text>
+              <TouchableOpacity style={[styles.qtyBtn, qty >= p.stock && styles.qtyBtnDisabled]} onPress={() => onIncrease(p)} disabled={qty >= p.stock}>
+                <Text style={styles.qtyBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
     </View>
   );
 }
@@ -670,6 +667,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden', borderWidth: 1, borderColor: BORDER_COLOR,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    // enforce a consistent card height so grid items align neatly
+    minHeight: 300,
+    justifyContent: 'space-between',
   },
   productImgWrap: {
     aspectRatio: 1,
@@ -699,6 +699,8 @@ const styles = StyleSheet.create({
   heartBtnLiked: { backgroundColor: '#FFF0F0' },
   heartBtnText: { fontSize: 15 },
   productBody: { padding: 10 },
+  // ensure body has consistent space for title/price/actions
+  productBodyInner: { minHeight: 92 },
   productName: { fontSize: 13, fontWeight: '600', color: DARK, marginBottom: 4, lineHeight: 18 },
   productPrice: { fontSize: 15, fontWeight: '700', color: ACCENT, marginBottom: 8 },
   productUnit: { fontSize: 11, fontWeight: '400', color: MUTED },
