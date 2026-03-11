@@ -22,7 +22,7 @@ import Header from '../../components/header';
 import { useCart } from "../../context/CartContext";
 
 const BASE_URL = 'http://localhost:8000';
-const FRAPPE_URL = 'http://192.168.29.141:8000'; // for images served from Frappe backend
+const FRAPPE_URL = 'http://groceryv15.localhost:8001'; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 

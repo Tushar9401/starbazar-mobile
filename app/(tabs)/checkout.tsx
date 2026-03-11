@@ -22,7 +22,7 @@ import Header from '../../components/header';
 import { useCart } from '../../context/CartContext';
 
 const BASE_URL = 'http://localhost:8000';
-const FRAPPE_URL = 'http://192.168.29.141:8000';
+const FRAPPE_URL = 'http://groceryv15.localhost:8001';
 const { width } = Dimensions.get('window');
 
 const ACCENT = '#2f8b3a';
@@ -55,29 +55,72 @@ export default function CheckoutScreen() {
   const [storedUser, setStoredUser] = useState({ firstName: '', lastName: '', email: '' });
 
   // load cart from AsyncStorage on mount
+  // useEffect(() => {
+  //   // load logged-in user info (if any) so we can prefill customer fields when placing orders
+  //   const loadUser = async () => {
+  //     try {
+  //       const username = await AsyncStorage.getItem('username');
+  //       const email = await AsyncStorage.getItem('email');
+
+  //       let firstName = '';
+  //       let lastName = '';
+  //       if (username) {
+  //         const parts = username.trim().split(/\s+/);
+  //         firstName = parts.shift() || '';
+  //         lastName = parts.join(' ') || '';
+  //       }
+
+  //       setStoredUser({ firstName, lastName, email: email || '' });
+  //       // also prefill formData when available
+  //       setFormData(f => ({ ...f, firstName: firstName || f.firstName, lastName: lastName || f.lastName, email: email || f.email }));
+  //     } catch (e) {
+  //       // ignore
+  //     }
+  //   };
+  //   loadUser();
+
   useEffect(() => {
-    // load logged-in user info (if any) so we can prefill customer fields when placing orders
     const loadUser = async () => {
       try {
-        const username = await AsyncStorage.getItem('username');
-        const email = await AsyncStorage.getItem('email');
+        const token = await AsyncStorage.getItem('token');
 
-        let firstName = '';
-        let lastName = '';
-        if (username) {
-          const parts = username.trim().split(/\s+/);
-          firstName = parts.shift() || '';
-          lastName = parts.join(' ') || '';
+        if (!token) {
+          console.log("No token found");
+          return;
         }
 
-        setStoredUser({ firstName, lastName, email: email || '' });
-        // also prefill formData when available
-        setFormData(f => ({ ...f, firstName: firstName || f.firstName, lastName: lastName || f.lastName, email: email || f.email }));
+        const res = await axios.get(`${BASE_URL}/api/profile/`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const { first_name, last_name, email } = res.data;
+
+        setStoredUser({
+          firstName: first_name || '',
+          lastName: last_name || '',
+          email: email || ''
+        });
+
+        setFormData(f => ({
+          ...f,
+          firstName: first_name || f.firstName,
+          lastName: last_name || f.lastName,
+          email: email || f.email
+        }));
+        console.log("Stored user:", {
+          first_name,
+          last_name,
+          email
+        });
       } catch (e) {
-        // ignore
+        console.log("Profile fetch failed:", e);
       }
     };
+
     loadUser();
+
     const loadOffers = async () => {
       try {
         const offersRes = await axios.get(`${BASE_URL}/api/pricing-offers/`);
@@ -273,6 +316,11 @@ export default function CheckoutScreen() {
           item_code: ci.item.item_code,
           qty,
           name: ci.item.item_name,
+          image: ci.item.image
+          ? (ci.item.image.startsWith("http")
+              ? ci.item.image
+              : `${FRAPPE_URL}${ci.item.image}`)
+          : null,
           original_price: unit,
           amount: lineAmount,
         };
