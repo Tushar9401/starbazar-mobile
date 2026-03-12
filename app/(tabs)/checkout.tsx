@@ -52,6 +52,7 @@ export default function CheckoutScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [confirmedTotals, setConfirmedTotals] = useState(null);
   // cached logged-in user info from AsyncStorage (if available)
   const [storedUser, setStoredUser] = useState({ firstName: '', lastName: '', email: '' });
 
@@ -336,13 +337,14 @@ export default function CheckoutScreen() {
       // Call the local create_sales_invoice endpoint
       const res = await axios.post(`${BASE_URL}/api/create-sales-invoice/`, payload);
       console.log(payload, res.data);
-      const invoice = res.data?.invoice || ('ORD' + Date.now());
-      setOrderNumber(invoice);
-      setOrderPlaced(true);
-      // await AsyncStorage.removeItem('cart');
-      // setCartObj({});
-      clearCart();
-      setStep(1);
+  const invoice = res.data?.invoice || ('ORD' + Date.now());
+  setOrderNumber(invoice);
+  // preserve totals/items for confirmation screen before clearing cart
+  setConfirmedTotals({ subtotal, tax, shipping, total, items: totalItems });
+  setOrderPlaced(true);
+  // clear cart after saving totals
+  clearCart();
+  setStep(1);
     } catch (err) {
       console.log('Order error', err);
       Alert.alert('Order failed', 'Could not place order');
@@ -382,6 +384,7 @@ export default function CheckoutScreen() {
   }
 
   if (orderPlaced) {
+    const display = confirmedTotals || { subtotal, tax, shipping, total, items: totalItems };
     const handleCopy = async () => {
       try {
         await Clipboard.setStringAsync(orderNumber || '');
@@ -408,12 +411,12 @@ export default function CheckoutScreen() {
           <View style={styles.orderSummaryCard}>
             <Text style={{ fontWeight: '700', color: ACCENT, marginBottom: 8 }}>Order Summary</Text>
             <View style={styles.orderSummaryInner}>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Items</Text><Text style={styles.summaryValue}>{Object.values(cart).reduce((s:any,i:any)=>s+(i.qty||0),0)}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>${shipping.toFixed(2)}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Tax</Text><Text style={styles.summaryValue}>${tax.toFixed(2)}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Items</Text><Text style={styles.summaryValue}>{display.items}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>${display.subtotal.toFixed(2)}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>${display.shipping.toFixed(2)}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Tax</Text><Text style={styles.summaryValue}>${display.tax.toFixed(2)}</Text></View>
               <View style={[styles.summaryDivider, { marginVertical: 10 }]} />
-              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { fontWeight: '700' }]}>Total</Text><Text style={[styles.summaryValue, { fontWeight: '700', color: ACCENT }]}>${total.toFixed(2)}</Text></View>
+              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { fontWeight: '700' }]}>Total</Text><Text style={[styles.summaryValue, { fontWeight: '700', color: ACCENT }]}>${display.total.toFixed(2)}</Text></View>
             </View>
           </View>
 

@@ -22,33 +22,78 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(6);
+  const [totalCount, setTotalCount] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = async (pageArg = page, append = false) => {
+    if (append) setLoadingMore(true); else setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        setOrders([]);
+        if (!append) setOrders([]);
         return;
       }
-      const res = await axios.get(`${BASE_URL}/api/orders/`, { headers: { Authorization: `Bearer ${token}` } });
-      setOrders(res.data || []);
+
+      // Try paginated endpoint first
+      const url = `${BASE_URL}/api/orders/?page=${pageArg}&page_size=${pageSize}`;
+      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+
+      // Support two shapes:
+      // 1) Paginated: { results: [...], count: N, next: URL }
+      // 2) Simple array: [...]
+      if (Array.isArray(res.data)) {
+        if (append) setOrders(prev => [...prev, ...res.data]); else setOrders(res.data || []);
+        setTotalCount(res.data.length || 0);
+      } else if (res.data.results && Array.isArray(res.data.results)) {
+        if (append) setOrders(prev => [...prev, ...res.data.results]); else setOrders(res.data.results || []);
+        setTotalCount(typeof res.data.count === 'number' ? res.data.count : null);
+      } else if (res.data.orders && Array.isArray(res.data.orders)) {
+        // Some APIs return { orders: [...] }
+        if (append) setOrders(prev => [...prev, ...res.data.orders]); else setOrders(res.data.orders || []);
+        setTotalCount(typeof res.data.count === 'number' ? res.data.count : null);
+      } else {
+        // fallback: set whatever came
+        if (!append) setOrders(res.data || []);
+      }
+
+      setPage(pageArg);
     } catch (err) {
       console.log('Orders fetch error', err?.response?.data || err.message || err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem('username').then(name => setCurrentUser(name));
-      fetchOrders();
+      setPage(1);
+      fetchOrders(1, false);
     }, [])
   );
 
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  
+  const handlePrev = () => {
+    if (page <= 1) return;
+    fetchOrders(page - 1, false);
+  };
+  
+  const handleNext = () => {
+    // If we know totalCount, prevent going past last page
+    if (totalCount && page * pageSize >= totalCount) return;
+    fetchOrders(page + 1, false);
+  };
+  
+  const handleLoadMore = () => {
+    // Append next page
+    if (totalCount && page * pageSize >= totalCount) return;
+    fetchOrders(page + 1, true);
+  };
 
   const handleLogout = async () => {
     await AsyncStorage.multiRemove(['token', 'username', 'refresh']);
@@ -156,6 +201,27 @@ export default function OrdersScreen() {
             );
           })
         )}
+        {/* Pagination controls */}
+        <View style={styles.paginationWrap}>
+          <TouchableOpacity style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]} onPress={handlePrev} disabled={page <= 1 || loading}>
+            <Text style={styles.pageBtnText}>Prev</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.pageInfo}>Page {page}{totalCount ? ` of ${Math.ceil(totalCount / pageSize)}` : ''}</Text>
+
+          <TouchableOpacity style={[styles.pageBtn, (totalCount && page * pageSize >= totalCount) && styles.pageBtnDisabled]} onPress={handleNext} disabled={(totalCount && page * pageSize >= totalCount) || loading}>
+            <Text style={styles.pageBtnText}>Next</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Load more (append) */}
+        {(!totalCount || page * pageSize < totalCount) && (
+          <View style={{ alignItems: 'center', marginTop: 8 }}>
+            <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore} disabled={loadingMore || loading}>
+              {loadingMore ? <ActivityIndicator color="#fff" /> : <Text style={styles.loadMoreText}>Load more</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -193,4 +259,11 @@ const styles = StyleSheet.create({
   reorderBtnText: { color: '#fff', fontWeight: '800' },
   itemsScroll: { maxHeight: 240, marginRight: -8, paddingRight: 8 },
   itemsScrollWeb: { overflow: 'auto' },
+  paginationWrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+  pageBtn: { paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e3e6', borderRadius: 8 },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageBtnText: { color: '#1A1A2E', fontWeight: '700' },
+  pageInfo: { color: '#6b7176', fontWeight: '700' },
+  loadMoreBtn: { backgroundColor: '#2f8b3a', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8 },
+  loadMoreText: { color: '#fff', fontWeight: '800' },
 });
