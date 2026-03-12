@@ -327,25 +327,53 @@ export default function HomeScreen() {
   );
 
   // Fetch products
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [bs, all, offers] = await Promise.all([
-          axios.get(`${BASE_URL}/api/best-sellers/`),
-          axios.get(`${BASE_URL}/api/shop-all-products/`),
-          axios.get(`${BASE_URL}/api/pricing-offers/`),
-        ]);
-        setBestSellers(bs.data);
-        setShopAllProducts(all.data);
-        setSpecialOffers(offers.data);
-      } catch (err) {
-        console.error('Fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
-  }, []);
+  // useEffect(() => {
+  //   const fetchAll = async () => {
+  //     try {
+  //       const [bs, all, offers] = await Promise.all([
+  //         axios.get(`${BASE_URL}/api/best-sellers/`),
+  //         axios.get(`${BASE_URL}/api/shop-all-products/`),
+  //         axios.get(`${BASE_URL}/api/pricing-offers/`),
+  //       ]);
+  //       setBestSellers(bs.data);
+  //       setShopAllProducts(all.data);
+  //       setSpecialOffers(offers.data);
+  //     } catch (err) {
+  //       console.error('Fetch error:', err);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchAll();
+  // }, []);
+    useFocusEffect(
+      useCallback(() => {
+
+        const fetchAll = async () => {
+          try {
+            setLoading(true);   // start loader
+
+            const [bs, all, offers] = await Promise.all([
+              axios.get(`${BASE_URL}/api/best-sellers/`),
+              axios.get(`${BASE_URL}/api/shop-all-products/`),
+              axios.get(`${BASE_URL}/api/pricing-offers/`)
+            ]);
+
+            setBestSellers(bs.data);
+            setShopAllProducts(all.data);
+            setSpecialOffers(offers.data);
+
+          } catch (err) {
+            console.log("Fetch error:", err);
+          } finally {
+            setLoading(false);   // stop loader
+          }
+        };
+
+        fetchAll();
+
+      }, [])
+    );
 
   // Fetch wishlist
   // useEffect(() => {
