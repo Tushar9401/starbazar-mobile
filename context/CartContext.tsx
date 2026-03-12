@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { emitCart } from '../utils/cartEvents';
 
 const CartContext = createContext<any>(null);
 
@@ -14,6 +15,12 @@ export const CartProvider = ({ children }: any) => {
 
   useEffect(() => {
     AsyncStorage.setItem("cart", JSON.stringify(cart));
+    try {
+      const total = Object.values(cart as any).reduce((s: number, i: any) => s + (i.qty || 0), 0);
+      emitCart(total);
+    } catch (e) {
+      // ignore
+    }
   }, [cart]);
 
   const increaseQty = (p: any) => {

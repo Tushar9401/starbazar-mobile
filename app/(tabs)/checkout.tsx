@@ -2,6 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import * as Clipboard from 'expo-clipboard';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -381,14 +382,53 @@ export default function CheckoutScreen() {
   }
 
   if (orderPlaced) {
+    const handleCopy = async () => {
+      try {
+        await Clipboard.setStringAsync(orderNumber || '');
+        Alert.alert('Copied', 'Order number copied to clipboard');
+      } catch (e) {
+        // ignore
+      }
+    };
+
     return (
       <SafeAreaView style={styles.root}>
-        <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text style={styles.confirmTitle}>Order Confirmed 🎉</Text>
-          <Text style={styles.confirmText}>Order Number: <Text style={{ fontWeight: '700' }}>{orderNumber}</Text></Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => { setOrderPlaced(false); navigation.navigate('Home'); }}>
+        <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }}>
+          <View style={styles.confirmTop}>
+            <View style={styles.checkCircle}><Text style={styles.checkMark}>✓</Text></View>
+            <Text style={styles.thankTitle}>Thank You for Your Order!</Text>
+            <View style={styles.orderRow}>
+              <Text style={styles.orderLabel}>Order Number: </Text>
+              <Text style={styles.orderNumber}>{orderNumber}</Text>
+              <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}><Text style={styles.copyBtnText}>Copy</Text></TouchableOpacity>
+            </View>
+            <Text style={styles.thankText}>Your order has been successfully placed. You will receive a confirmation email shortly with tracking information.</Text>
+          </View>
+
+          <View style={styles.orderSummaryCard}>
+            <Text style={{ fontWeight: '700', color: ACCENT, marginBottom: 8 }}>Order Summary</Text>
+            <View style={styles.orderSummaryInner}>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Items</Text><Text style={styles.summaryValue}>{Object.values(cart).reduce((s:any,i:any)=>s+(i.qty||0),0)}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>${shipping.toFixed(2)}</Text></View>
+              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Tax</Text><Text style={styles.summaryValue}>${tax.toFixed(2)}</Text></View>
+              <View style={[styles.summaryDivider, { marginVertical: 10 }]} />
+              <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { fontWeight: '700' }]}>Total</Text><Text style={[styles.summaryValue, { fontWeight: '700', color: ACCENT }]}>${total.toFixed(2)}</Text></View>
+            </View>
+          </View>
+
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20, width: '100%' }]} onPress={() => { setOrderPlaced(false); navigation.navigate('Home'); }}>
             <Text style={styles.primaryBtnText}>Continue Shopping</Text>
           </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', marginTop: 12, width: '100%', justifyContent: 'space-between' }}>
+            <TouchableOpacity style={styles.outlineBtn} onPress={() => { setOrderPlaced(false); navigation.navigate('/orders'); }}>
+              <Text style={styles.outlineBtnText}>View Orders</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.ghostBtn} onPress={() => { /* implement print if needed */ }}>
+              <Text style={styles.ghostBtnText}>Print Receipt</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -698,5 +738,28 @@ const styles = StyleSheet.create({
   orderItemsList: { marginTop: 8 },
   orderItemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.03)' },
   thumbSmall: { width: 48, height: 48, backgroundColor: PAGE_BG, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-yValue: { minWidth: 24, textAlign: 'center', fontWeight: '700', color: DARK },
-  removeText: { marginTop: 4, color: '#d64545', fontWeight: '700', fontSize: 12 },});
+  yValue: { minWidth: 24, textAlign: 'center', fontWeight: '700', color: DARK },
+  removeText: { marginTop: 4, color: '#d64545', fontWeight: '700', fontSize: 12 },
+
+  /* Confirmation screen styles */
+  confirmTop: { alignItems: 'center', width: '100%', marginBottom: 12 },
+  checkCircle: { width: 72, height: 72, borderRadius: 40, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', marginBottom: 12, shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 3 },
+  checkMark: { color: WHITE, fontSize: 36, fontWeight: '800' },
+  thankTitle: { fontSize: 20, fontWeight: '800', color: DARK, marginBottom: 8 },
+  orderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  orderLabel: { color: MUTED },
+  orderNumber: { fontWeight: '800', color: ACCENT, marginRight: 8 },
+  copyBtn: { borderWidth: 1, borderColor: BORDER_COLOR, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+  copyBtnText: { color: MUTED, fontWeight: '700' },
+  thankText: { color: MUTED, textAlign: 'center', maxWidth: 520 },
+
+  orderSummaryCard: { width: '100%', maxWidth: 520, backgroundColor: WHITE, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: BORDER_COLOR, marginTop: 18 },
+  orderSummaryInner: { backgroundColor: 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 8 },
+  summaryLabel: { color: MUTED },
+  summaryValue: { fontWeight: '700' },
+  outlineBtn: { flex: 1, borderWidth: 1, borderColor: ACCENT, paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginRight: 8, backgroundColor: 'transparent' },
+  outlineBtnText: { color: ACCENT, fontWeight: '700' },
+  ghostBtn: { flex: 1, borderWidth: 1, borderColor: BORDER_COLOR, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: WHITE, borderStyle: 'dashed' },
+  ghostBtnText: { color: MUTED, fontWeight: '700' },
+});
+

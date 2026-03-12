@@ -4,14 +4,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import React, { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Header from '../../components/header';
 
@@ -124,19 +124,26 @@ export default function OrdersScreen() {
 
                 {isOpen && (
                   <View style={styles.cardBody}>
-                    {order.items.map((it, idx) => (
-                      <View key={idx} style={styles.itemRow}>
-                        <Image source={{ uri: it.image }} style={styles.itemImg} />
-                        <View style={styles.itemInfo}>
-                          <Text style={styles.itemName}>{it.name}</Text>
-                          <Text style={styles.itemDetails}>{it.details}</Text>
+                    <ScrollView
+                      style={[styles.itemsScroll, Platform.OS === 'web' && styles.itemsScrollWeb]}
+                      contentContainerStyle={{ paddingBottom: 12 }}
+                      nestedScrollEnabled={true}
+                      showsVerticalScrollIndicator={true}
+                    >
+                      {order.items.map((it, idx) => (
+                        <View key={idx} style={styles.itemRow}>
+                          <Image source={{ uri: it.image }} style={styles.itemImg} />
+                          <View style={styles.itemInfo}>
+                            <Text style={styles.itemName}>{it.name}</Text>
+                            <Text style={styles.itemDetails}>{it.details}</Text>
+                          </View>
+                          <View style={styles.itemMeta}>
+                            <Text style={styles.itemPrice}>${(it.price || 0).toFixed(2)}</Text>
+                            <Text style={styles.itemQty}>Qty: {it.qty}</Text>
+                          </View>
                         </View>
-                        <View style={styles.itemMeta}>
-                          <Text style={styles.itemPrice}>${(it.price || 0).toFixed(2)}</Text>
-                          <Text style={styles.itemQty}>Qty: {it.qty}</Text>
-                        </View>
-                      </View>
-                    ))}
+                      ))}
+                    </ScrollView>
 
                     <View style={styles.cardActions}>
                       <TouchableOpacity style={styles.reorderBtn} onPress={() => handleReorder(order)}>
@@ -184,4 +191,6 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 6 },
   reorderBtn: { backgroundColor: '#2f8b3a', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 },
   reorderBtnText: { color: '#fff', fontWeight: '800' },
+  itemsScroll: { maxHeight: 240, marginRight: -8, paddingRight: 8 },
+  itemsScrollWeb: { overflow: 'auto' },
 });
