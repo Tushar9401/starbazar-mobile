@@ -34,6 +34,13 @@ const WHITE = '#FFFFFF';
 const MUTED = '#6b7176';
 const DARK = '#1A1A2E';
 
+let WebView = null;
+try {
+  WebView = require('react-native-webview').WebView;
+} catch (e) {
+  WebView = null;
+}
+
 export default function CheckoutScreen() {
   const navigation = useNavigation();
 
@@ -281,17 +288,7 @@ export default function CheckoutScreen() {
 
   // Try to require the native WebView only on native platforms. This avoids bundling
   // `react-native-webview` for the web build (which causes the UnableToResolveError).
-  let NativeWebView = null;
-  if (Platform.OS !== 'web') {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      NativeWebView = require('react-native-webview').WebView;
-    } catch (e) {
-      NativeWebView = null;
-      // WebView not installed — native builds will fallback to placeholder and the Open in Maps button.
-      console.log('react-native-webview not available', e?.message || e);
-    }
-  }
+
 
   const handlePlaceOrder = async () => {
     console.log('handlePlaceOrder called, step=', step, 'submitting=', submitting);
@@ -534,23 +531,26 @@ export default function CheckoutScreen() {
                   <View>
                     <Text style={styles.sectionTitle}>Pickup</Text>
                     <View style={styles.pickupMapWrap}>
-                      <View style={styles.mapPreview}>
-                        {/* Render native WebView on iOS/Android when available. For web or when
-                            `react-native-webview` isn't installed we keep a harmless placeholder
-                            so the web bundle doesn't fail. */}
-                        {NativeWebView ? (
-                          <NativeWebView
-                            originWhitelist={["*"]}
-                            source={{ uri: MAPS_EMBED }}
-                            style={{ flex: 1, width: '100%' }}
-                            automaticallyAdjustContentInsets={false}
-                          />
-                        ) : (
-                          <View style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-                            <Text style={{ color: MUTED }}>Map preview</Text>
-                          </View>
-                        )}
-                      </View>
+                     <View style={styles.mapPreview}>
+                      {Platform.OS === 'web' ? (
+                        <iframe
+                          src={MAPS_EMBED}
+                          style={{ width: '100%', height: '100%', border: 'none', borderRadius: 10 }}
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
+                      ) : (
+                        <WebView
+                          originWhitelist={["*"]}
+                          source={{ uri: MAPS_EMBED }}
+                          style={{ flex: 1, width: '100%' }}
+                          automaticallyAdjustContentInsets={false}
+                          javaScriptEnabled={true}
+                          domStorageEnabled={true}
+                        />
+                      )}
+                    </View>
                       <TouchableOpacity style={styles.mapBtn} onPress={() => Linking.openURL(MAPS_URL)}>
                         <Text style={styles.mapBtnText}>📍 View Full Map</Text>
                       </TouchableOpacity>
@@ -570,11 +570,11 @@ export default function CheckoutScreen() {
                           <Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text>
                         </View>
                       </View>
-                     <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={next}>
-                      <Text style={styles.primaryBtnText}>Review Order →</Text>
-                    </TouchableOpacity>
                     </View>
                   </View>
+                    <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={next}>
+                      <Text style={styles.primaryBtnText}>Review Order →</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={{ flex: 1, marginTop: isWide ? 0 : 28, alignSelf: 'stretch' }}>
