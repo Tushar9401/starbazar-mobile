@@ -9,7 +9,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://10.11.4.1:8000';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();

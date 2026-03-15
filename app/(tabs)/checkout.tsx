@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import * as Clipboard from 'expo-clipboard';
 import React, { useEffect, useMemo, useState } from 'react';
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -22,7 +23,7 @@ import {
 import Header from '../../components/header';
 import { useCart } from '../../context/CartContext';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://10.11.4.1:8000';
 const FRAPPE_URL = 'http://groceryv15.localhost:8001';
 const { width } = Dimensions.get('window');
 
@@ -306,49 +307,94 @@ export default function CheckoutScreen() {
 
     if (cartArr.length === 0) { Alert.alert('Cart empty', 'Add items before ordering'); return; }
     // console.log('Placing order with data:', { formData, cartArr, tax });
-    setSubmitting(true);
-    try {
-      console.log('Placing order with data:', { formData, cartArr, tax });
-      // Build items with explicit numeric prices/amounts (use getItemTotal to respect offers)
-      const items = cartArr.map(ci => {
-        const unit = Number(ci.item.price || 0);
-        const qty = Number(ci.qty || 0);
-        const lineAmount = Number(getItemTotal(ci));
-        return {
-          item_code: ci.item.item_code,
-          qty,
-          name: ci.item.item_name,
-          image: ci.item.image
-          ? (ci.item.image.startsWith("http")
-              ? ci.item.image
-              : `${FRAPPE_URL}${ci.item.image}`)
-          : null,
-          original_price: unit,
-          amount: lineAmount,
-        };
-      });
+  //   setSubmitting(true);
+  //   try {
+  //     console.log('Placing order with data:', { formData, cartArr, tax });
+  //     // Build items with explicit numeric prices/amounts (use getItemTotal to respect offers)
+  //     const items = cartArr.map(ci => {
+  //       const unit = Number(ci.item.price || 0);
+  //       const qty = Number(ci.qty || 0);
+  //       const lineAmount = Number(getItemTotal(ci));
+  //       return {
+  //         item_code: ci.item.item_code,
+  //         qty,
+  //         name: ci.item.item_name,
+  //         image: ci.item.image
+  //         ? (ci.item.image.startsWith("http")
+  //             ? ci.item.image
+  //             : `${FRAPPE_URL}${ci.item.image}`)
+  //         : null,
+  //         original_price: unit,
+  //         amount: lineAmount,
+  //       };
+  //     });
 
-  const customerFirst = storedUser.firstName || formData.firstName || '';
-  const customerLast = storedUser.lastName || formData.lastName || '';
-  const customerEmail = storedUser.email || formData.email || '';
-  const payload = { customer_name: `${customerFirst} ${customerLast}`.trim(), email: customerEmail, items, tax, order_id: Date.now().toString() };
-      // debug payload shape
-      console.log('Order payload:', JSON.stringify(payload, null, 2));
-      // Call the local create_sales_invoice endpoint
-      const res = await axios.post(`${BASE_URL}/api/create-sales-invoice/`, payload);
-      console.log(payload, res.data);
-  const invoice = res.data?.invoice || ('ORD' + Date.now());
-  setOrderNumber(invoice);
-  // preserve totals/items for confirmation screen before clearing cart
-  setConfirmedTotals({ subtotal, tax, shipping, total, items: totalItems });
-  setOrderPlaced(true);
-  // clear cart after saving totals
-  clearCart();
-  setStep(1);
-    } catch (err) {
-      console.log('Order error', err);
-      Alert.alert('Order failed', 'Could not place order');
-    } finally { setSubmitting(false); }
+  // const customerFirst = storedUser.firstName || formData.firstName || '';
+  // const customerLast = storedUser.lastName || formData.lastName || '';
+  // const customerEmail = storedUser.email || formData.email || '';
+  // const payload = { customer_name: `${customerFirst} ${customerLast}`.trim(), email: customerEmail, items, tax, order_id: Date.now().toString() };
+  //     // debug payload shape
+  //     console.log('Order payload:', JSON.stringify(payload, null, 2));
+  //     // Call the local create_sales_invoice endpoint
+  //     const res = await axios.post(`${BASE_URL}/api/create-sales-invoice/`, payload);
+  //     console.log(payload, res.data);
+  // const invoice = res.data?.invoice || ('ORD' + Date.now());
+  // setOrderNumber(invoice);
+  // // preserve totals/items for confirmation screen before clearing cart
+  // setConfirmedTotals({ subtotal, tax, shipping, total, items: totalItems });
+  // setOrderPlaced(true);
+  // // clear cart after saving totals
+  // clearCart();
+  // setStep(1);
+  //   } catch (err) {
+  //     console.log('Order error', err);
+  //     Alert.alert('Order failed', 'Could not place order');
+  //   } finally { setSubmitting(false); }
+  // };
+
+  setSubmitting(true);
+
+  try {
+    const items = cartArr.map(ci => ({
+      name: ci.item.item_name,
+      qty: ci.qty,
+      amount: getItemTotal(ci)
+    }));
+
+    const customerFirst = storedUser.firstName || formData.firstName || '';
+    const customerLast = storedUser.lastName || formData.lastName || '';
+    const customerEmail = storedUser.email || formData.email || '';
+
+    const res = await axios.post(`${BASE_URL}/api/create-clover-checkout/`, {
+      order_id: Date.now().toString(),
+      first_name: customerFirst,
+      last_name: customerLast,
+      email: customerEmail,
+      items,
+      tax,
+      total
+    });
+
+    const checkoutUrl = res.data.href;
+
+    if (!checkoutUrl) {
+      Alert.alert("Payment error", "Could not create Clover checkout.");
+      return;
+    }
+
+    // open Clover hosted checkout
+    // await Linking.openURL(checkoutUrl);
+    router.push({
+      pathname: "/cloverPayment",
+      params: { url: checkoutUrl }
+    });
+
+  } catch (err) {
+    console.log(err);
+    Alert.alert("Payment failed", "Unable to start Clover checkout");
+  } finally {
+    setSubmitting(false);
+  }
   };
 
   // UI helpers (now a 2-step flow)
@@ -765,4 +811,3 @@ const styles = StyleSheet.create({
   ghostBtn: { flex: 1, borderWidth: 1, borderColor: BORDER_COLOR, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: WHITE, borderStyle: 'dashed' },
   ghostBtnText: { color: MUTED, fontWeight: '700' },
 });
-

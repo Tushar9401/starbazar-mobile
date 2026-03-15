@@ -7,7 +7,7 @@ import { ActivityIndicator, Dimensions, FlatList, Image, Modal, SafeAreaView, St
 import Header from '../../components/header';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://10.11.4.1:8000';
 const FRAPPE_URL = 'http://groceryv15.localhost:8001'; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
