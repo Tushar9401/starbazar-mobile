@@ -3,8 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import * as Clipboard from 'expo-clipboard';
-import React, { useEffect, useMemo, useState } from 'react';
 import { router } from "expo-router";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,8 +23,8 @@ import {
 import Header from '../../components/header';
 import { useCart } from '../../context/CartContext';
 
-const BASE_URL = 'http://10.11.4.1:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001';
+const BASE_URL = 'http://192.168.29.141:8000';
+const FRAPPE_URL = 'http://192.168.29.141:8001'; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 
 const ACCENT = '#2f8b3a';
@@ -570,6 +570,9 @@ export default function CheckoutScreen() {
                           <Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text>
                         </View>
                       </View>
+                     <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={next}>
+                      <Text style={styles.primaryBtnText}>Review Order →</Text>
+                    </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -597,9 +600,9 @@ export default function CheckoutScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={next}>
+              {/* <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={next}>
                 <Text style={styles.primaryBtnText}>Review Order →</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
 
             </View>
           )}
