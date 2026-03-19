@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,8 +20,8 @@ import {
 } from 'react-native';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://10.11.4.1:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001';
+const BASE_URL = 'http://localhost:8000';
+const FRAPPE_URL = 'http://192.168.29.141:8000'; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
@@ -139,6 +139,10 @@ export default function AllProductsScreen() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.searchTerm);
+  const searchRef = useRef(null);
+  const wasSearchFocused = useRef(false);
 
   // const [cart, setCart] = useState({});
   const [liked, setLiked] = useState({});
@@ -241,7 +245,7 @@ export default function AllProductsScreen() {
         page: currentPage,
         page_size: 12,
         category: filters.category,
-        search: filters.searchTerm,
+        search: debouncedSearch,
         sort_by: sortBy,
       }
     })
@@ -264,8 +268,28 @@ export default function AllProductsScreen() {
       setTotalCount(res.data.total_count);
     })
     .catch(err => console.error('Products fetch error', err))
-    .finally(() => setLoading(false));
-  }, [currentPage, filters, sortBy]);
+    .finally(() => {
+      setLoading(false);
+      setInitialLoading(false);
+    });
+  }, [currentPage, filters.category, sortBy, debouncedSearch]);
+
+  // debounce search term so we don't refetch on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(filters.searchTerm), 450);
+    return () => clearTimeout(t);
+  }, [filters.searchTerm]);
+
+  // keep cursor focused on search input after results refresh, but only if user had focus before
+  useEffect(() => {
+    if (!loading && wasSearchFocused.current) {
+      // small delay to ensure input is mounted
+      const id = setTimeout(() => {
+        try { searchRef.current?.focus?.(); } catch (e) {}
+      }, 60);
+      return () => clearTimeout(id);
+    }
+  }, [loading, debouncedSearch]);
 
   // const increaseQty = (p) => setCart(prev => ({ ...prev, [p.item_code]: { item: p, qty: (prev[p.item_code]?.qty || 0) + 1 } }));
   // const decreaseQty = (p) => setCart(prev => {
@@ -316,7 +340,15 @@ export default function AllProductsScreen() {
 
       <View style={styles.heroBannerSmall}>
         <Text style={styles.pageTitle}>Shop All Products</Text>
-        <TextInput placeholder="Search products..." value={filters.searchTerm} onChangeText={t => setFilters(prev => ({ ...prev, searchTerm: t }))} style={styles.searchInput} />
+        <TextInput
+          ref={searchRef}
+          placeholder="Search products..."
+          value={filters.searchTerm}
+          onChangeText={t => setFilters(prev => ({ ...prev, searchTerm: t }))}
+          onFocus={() => { wasSearchFocused.current = true; }}
+          onBlur={() => { wasSearchFocused.current = false; }}
+          style={styles.searchInput}
+        />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, paddingHorizontal: 12 }}>
           {categories.map(cat => (
             <TouchableOpacity key={cat} style={[styles.catBtn, filters.category === cat && styles.catBtnActive]} onPress={() => { setFilters(prev => ({ ...prev, category: cat })); setCurrentPage(1); }}>
