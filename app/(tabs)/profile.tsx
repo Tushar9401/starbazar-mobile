@@ -6,10 +6,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://10.11.4.1:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL;
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -21,6 +22,7 @@ export default function ProfileScreen() {
   const [pageSize] = useState(6);
   const [totalCount, setTotalCount] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const { cart, setCart } = useCart();
 
   const fetchOrders = async (pageArg = page, append = false) => {
@@ -61,10 +63,6 @@ export default function ProfileScreen() {
     useCallback(() => {
       AsyncStorage.getItem('username').then((u) => {
         setUsername(u);
-        if (!u) {
-          // if no user, redirect to login
-          navigation.navigate('login');
-        }
       });
       setPage(1);
       fetchOrders(1, false);
@@ -173,7 +171,54 @@ export default function ProfileScreen() {
     await AsyncStorage.multiRemove(['token', 'username', 'refresh']);
     setUsername(null);
     setOrders([]);
-    navigation.navigate('login');
+    navigation.navigate('home');
+  };
+
+  const deleteAccount = async () => {
+    if (deletingAccount) return;
+
+    setDeletingAccount(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        await AsyncStorage.multiRemove(['token', 'username', 'refresh']);
+        navigation.navigate('home');
+        return;
+      }
+
+      await axios.delete(`${BASE_URL}/api/delete-account/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      await AsyncStorage.multiRemove(['token', 'username', 'refresh', 'cart']);
+      setUsername(null);
+      setOrders([]);
+      setCart({});
+      Alert.alert('Account deleted', 'Your account has been deleted.');
+      navigation.navigate('home');
+    } catch (err) {
+      console.log('Delete account error', err?.response?.data || err.message || err);
+      Alert.alert('Delete failed', 'Unable to delete your account. Please try again.');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = globalThis.confirm?.('Delete account? This will permanently delete your account and sign you out.');
+      if (confirmed) deleteAccount();
+      return;
+    }
+
+    Alert.alert(
+      'Delete account?',
+      'This will permanently delete your account and sign you out.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: deleteAccount },
+      ]
+    );
   };
 
   return (
@@ -260,6 +305,24 @@ export default function ProfileScreen() {
             <Text style={[styles.nextText, ((totalCount && page * pageSize >= totalCount) || loading) && styles.disabledText]}>Next →</Text>
           </TouchableOpacity>
         </View>
+
+        {username ? (
+          <View style={styles.dangerZone}>
+            <Text style={styles.dangerTitle}>Account</Text>
+            <Text style={styles.dangerText}>Delete your account and remove your saved login from this device.</Text>
+            <TouchableOpacity
+              style={[styles.deleteAccountBtn, deletingAccount && styles.deleteAccountBtnDisabled]}
+              onPress={confirmDeleteAccount}
+              disabled={deletingAccount}
+            >
+              {deletingAccount ? (
+                <ActivityIndicator color="#D32F2F" />
+              ) : (
+                <Text style={styles.deleteAccountText}>Delete Account</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -307,4 +370,10 @@ const styles = StyleSheet.create({
   nextText: { color: '#2f8b3a', fontWeight: '700' },
   pageIndicator: { fontWeight: '800', color: '#1A1A2E' },
   disabledText: { opacity: 0.4 },
+  dangerZone: { marginTop: 16, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(211,47,47,0.25)', padding: 14 },
+  dangerTitle: { color: '#1A1A2E', fontWeight: '800', marginBottom: 4 },
+  dangerText: { color: '#6b7176', marginBottom: 12 },
+  deleteAccountBtn: { borderWidth: 1, borderColor: '#D32F2F', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
+  deleteAccountBtnDisabled: { opacity: 0.6 },
+  deleteAccountText: { color: '#D32F2F', fontWeight: '800' },
 });

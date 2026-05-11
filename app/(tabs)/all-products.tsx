@@ -1,8 +1,8 @@
 // @ts-nocheck
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,8 +20,8 @@ import {
 } from 'react-native';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://localhost:8000';
-const FRAPPE_URL = 'http://192.168.29.141:8000'; // for images served from Frappe backend
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
@@ -129,7 +129,7 @@ function NutritionModal({ product, visible, onClose }) {
 }
 
 export default function AllProductsScreen() {
-  const navigation = useNavigation();
+  const router = useRouter();
   const { cart, increaseQty, decreaseQty } = useCart(); 
   const [allProducts, setAllProducts] = useState([]);
   const [categories, setCategories] = useState(['all']);
@@ -227,14 +227,14 @@ export default function AllProductsScreen() {
             setLiked(likedMap);
           } catch {
             await AsyncStorage.multiRemove(['token','refresh','username']);
-            navigation.navigate('Login');
+            setLiked({});
           }
         }
       }
     };
 
     fetchWishlist();
-  }, [navigation])
+  }, [])
 );
 
   // fetch products
@@ -300,7 +300,7 @@ export default function AllProductsScreen() {
   const toggleLike = async (item_code) => {
     const access = await AsyncStorage.getItem('token');
     const refresh = await AsyncStorage.getItem('refresh');
-    if (!access) { navigation.navigate('Login'); return; }
+    if (!access) { router.push('/login'); return; }
     try {
       const res = await axios.post(`${BASE_URL}/api/wishlist/toggle/`, { item_code }, { headers: { Authorization: `Bearer ${access}` } });
       setLiked(prev => ({ ...prev, [item_code]: res.data.status === 'added' }));
@@ -312,7 +312,8 @@ export default function AllProductsScreen() {
           const retry = await axios.post(`${BASE_URL}/api/wishlist/toggle/`, { item_code }, { headers: { Authorization: `Bearer ${newAccess}` } });
           setLiked(prev => ({ ...prev, [item_code]: retry.data.status === 'added' }));
         } catch {
-          await AsyncStorage.multiRemove(['token','refresh','username']); navigation.navigate('Login');
+          await AsyncStorage.multiRemove(['token','refresh','username']);
+          setLiked({});
         }
       }
     }
@@ -330,10 +331,15 @@ export default function AllProductsScreen() {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}> 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center' }}
+          onPress={() => router.push('/home')}
+          accessibilityRole="button"
+          accessibilityLabel="Go to home"
+        >
           <Text style={styles.brandIcon}>🌿</Text>
           <Text style={styles.brandName}>StarBazar</Text>
-        </View>
+        </TouchableOpacity>
         {/* Right side intentionally left empty: header should only show the brand (no wishlist icon) */}
         <View style={{ width: 32 }} />
       </View>

@@ -1,15 +1,16 @@
 // @ts-nocheck
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, ImageBackground, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Header from '../../components/header';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL;
 
 export default function SignupScreen() {
-  const navigation = useNavigation();
+  const router = useRouter();
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '', confirmPassword: '', agreeTerms: false });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,8 +48,8 @@ export default function SignupScreen() {
       if (data.refresh) await AsyncStorage.setItem('refresh', data.refresh);
       await AsyncStorage.setItem('username', formData.fullName);
 
-      // After signup, navigate to Login screen inside tabs
-      navigation.navigate('Login');
+      // After signup, navigate to the registered login route.
+      router.push('/login');
     } catch (err) {
       console.log('Signup error', err?.response?.data || err.message || err);
       setError(err?.response?.data?.detail || 'Signup failed. Please try again.');
@@ -88,7 +89,7 @@ export default function SignupScreen() {
 
               <View style={styles.row}> 
                 <Text style={styles.small}>Already have an account?</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}><Text style={[styles.small, styles.link]}>Login here</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/login')}><Text style={[styles.small, styles.link]}>Login here</Text></TouchableOpacity>
               </View>
             </View>
           </View>

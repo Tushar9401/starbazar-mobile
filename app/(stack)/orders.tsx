@@ -2,6 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,10 +16,12 @@ import {
 } from 'react-native';
 import Header from '../../components/header';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL;
 
 export default function OrdersScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
@@ -97,7 +100,7 @@ export default function OrdersScreen() {
 
   const handleLogout = async () => {
     await AsyncStorage.multiRemove(['token', 'username', 'refresh']);
-    navigation.navigate('login');
+    router.push('/login');
   };
 
   const handleReorder = async (order) => {

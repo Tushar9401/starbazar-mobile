@@ -12,6 +12,7 @@ export default function RootLayout() {
     <CartProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(stack)" />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>

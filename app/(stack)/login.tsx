@@ -1,15 +1,13 @@
 // @ts-nocheck
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, ImageBackground, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Header from '../../components/header';
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function LoginScreen() {
-  const navigation = useNavigation();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,9 +32,9 @@ export default function LoginScreen() {
       try {
         // navigate to the app's Home tab instead of the router index
         router.replace('/home');
-      } catch (e) {
+      } catch {
         // fallback to react-navigation if router is unavailable
-        navigation.navigate('home');
+        router.replace('/home');
       }
     } catch (err) {
       console.log('Login error', err?.response?.data || err.message || err);
@@ -108,9 +106,9 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <View style={styles.row}>
-                <Text style={styles.small}>Don't have an account?</Text>
+                <Text style={styles.small}>Don&apos;t have an account?</Text>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate("signup")}
+                  onPress={() => router.push("/signup")}
                 >
                   <Text style={[styles.small, styles.link]}>Sign up</Text>
                 </TouchableOpacity>

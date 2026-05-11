@@ -23,8 +23,8 @@ import {
 import Header from '../../components/header';
 import { useCart } from '../../context/CartContext';
 
-const BASE_URL = 'http://192.168.29.141:8000';
-const FRAPPE_URL = 'http://192.168.29.141:8001'; // for images served from Frappe backend
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 
 const ACCENT = '#2f8b3a';

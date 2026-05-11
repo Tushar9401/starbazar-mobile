@@ -1,4 +1,5 @@
-import { Tabs } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -8,6 +9,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   return (
     <Tabs
@@ -73,6 +75,14 @@ export default function TabLayout() {
       {/* Profile tab */}
       <Tabs.Screen
         name="profile"
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            AsyncStorage.getItem('token').then((token) => {
+              router.push(token ? '/profile' : '/login');
+            });
+          },
+        }}
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person" color={color} />,

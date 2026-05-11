@@ -32,10 +32,15 @@ export default function Header({ totalItems = 0, currentUser = null, onOpenUserM
 
   return (
     <View style={styles.header}>
-      <View style={styles.brand}>
+      <Pressable
+        style={styles.brand}
+        onPress={() => router.push('/home')}
+        accessibilityRole="button"
+        accessibilityLabel="Go to home"
+      >
         <Text style={styles.brandIcon}>🌿</Text>
         <Text style={styles.brandName}>StarBazar</Text>
-      </View>
+      </Pressable>
 
       <View style={styles.headerActions}>
         {/* Do not show the logged-in username. Only show Log in when no user is present. */}
@@ -113,4 +118,3 @@ const styles = StyleSheet.create({
   },
   loginBtnText: { fontSize: 13, fontWeight: '700', color: ACCENT },
 });
-

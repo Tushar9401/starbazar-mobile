@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,8 +22,8 @@ import {
 import Header from '../../components/header';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://10.11.4.1:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001'; // for images served from Frappe backend
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
@@ -285,6 +286,7 @@ function UserMenu({ visible, username, onOrders, onLogout, onClose }) {
 // ─── MAIN HOME SCREEN ─────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const { cart, increaseQty, decreaseQty } = useCart();
 
   const [bestSellers, setBestSellers] = useState([]);
@@ -440,7 +442,7 @@ export default function HomeScreen() {
   // Wishlist toggle
   const toggleLike = async (item_code) => {
     const token = await AsyncStorage.getItem('token');
-    if (!token) { navigation.navigate('login'); return; }
+    if (!token) { router.push('/login'); return; }
     try {
       const res = await authPost(`${BASE_URL}/api/wishlist/toggle/`, { item_code });
       setLiked(prev => ({ ...prev, [item_code]: res.data.status === 'added' }));
@@ -454,7 +456,7 @@ export default function HomeScreen() {
     await AsyncStorage.multiRemove(['token', 'username', 'refresh']);
     setCurrentUser(null);
     setShowUserMenu(false);
-    navigation.navigate('login');
+    router.push('/login');
   };
 
   const cartProps = {

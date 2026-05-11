@@ -2,13 +2,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Image, Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Header from '../../components/header';
 import { useCart } from "../../context/CartContext";
 
-const BASE_URL = 'http://10.11.4.1:8000';
-const FRAPPE_URL = 'http://groceryv15.localhost:8001'; // for images served from Frappe backend
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const FRAPPE_URL = process.env.EXPO_PUBLIC_FRAPPE_URL; // for images served from Frappe backend
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
@@ -120,6 +121,7 @@ function NutritionModal({ product, visible, onClose }) {
 
 export default function WishlistScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const { cart, increaseQty, decreaseQty } = useCart();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
@@ -216,7 +218,7 @@ export default function WishlistScreen() {
 
   const toggleLike = async (item_code) => {
     const token = await AsyncStorage.getItem('token');
-    if (!token) { navigation.navigate('login'); return; }
+    if (!token) { router.push('/login'); return; }
     try {
       const res = await axios.post(`${BASE_URL}/api/wishlist/toggle/`, { item_code }, { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.status === 'removed') {
