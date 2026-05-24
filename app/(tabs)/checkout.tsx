@@ -295,6 +295,16 @@ export default function CheckoutScreen() {
     // only final submit on step 2 (Review) in the new 2-step flow
     if (step !== 2) { setStep(2); return; }
 
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      Alert.alert(
+        'Login required',
+        'Please login before placing an order.',
+        [{ text: 'OK', onPress: () => router.push('/login') }]
+      );
+      return;
+    }
+
     // Require name/email for non-pickup orders, but allow pickup orders to place without them.
     if (formData.deliveryMethod !== 'pickup' && (!formData.firstName || !formData.lastName || !formData.email)) {
       console.log('Order blocked: missing customer info', { formData });

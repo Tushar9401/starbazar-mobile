@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { Alert } from "react-native";
 import { emitCart } from '../utils/cartEvents';
 
 const CartContext = createContext<any>(null);
@@ -23,7 +25,18 @@ export const CartProvider = ({ children }: any) => {
     }
   }, [cart]);
 
-  const increaseQty = (p: any) => {
+  const increaseQty = async (p: any) => {
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      Alert.alert(
+        "Login required",
+        "Please login before adding to cart.",
+        [{ text: "OK", onPress: () => router.push("/login") }]
+      );
+      return;
+    }
+
     const key = p.item_code;
 
     setCart((prev: any) => ({
