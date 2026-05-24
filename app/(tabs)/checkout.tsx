@@ -268,7 +268,7 @@ export default function CheckoutScreen() {
       else if (ci.item.non_food) tax += lineSubtotal * 0.08;
       else if (ci.item.tobacco) tax += lineSubtotal * 0.05;
     });
-    const shipping = cartArr.length ? 5.99 : 0;
+    const shipping = 0;
     const total = subtotal + tax + shipping;
     return { subtotal, tax, shipping, total };
   };
