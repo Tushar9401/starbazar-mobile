@@ -477,7 +477,7 @@ export default function CheckoutScreen() {
             <View style={styles.orderSummaryInner}>
               <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Items</Text><Text style={styles.summaryValue}>{display.items}</Text></View>
               <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>${display.subtotal.toFixed(2)}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>${display.shipping.toFixed(2)}</Text></View>
+              {/* <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Shipping</Text><Text style={styles.summaryValue}>${display.shipping.toFixed(2)}</Text></View> */}
               <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Tax</Text><Text style={styles.summaryValue}>${display.tax.toFixed(2)}</Text></View>
               <View style={[styles.summaryDivider, { marginVertical: 10 }]} />
               <View style={styles.summaryRow}><Text style={[styles.summaryLabel, { fontWeight: '700' }]}>Total</Text><Text style={[styles.summaryValue, { fontWeight: '700', color: ACCENT }]}>${display.total.toFixed(2)}</Text></View>
@@ -722,7 +722,7 @@ export default function CheckoutScreen() {
 
               <View style={[styles.orderCard, { marginTop: 12 }]}> 
                 <View style={styles.summaryRow}><Text>Subtotal</Text><Text>${subtotal.toFixed(2)}</Text></View>
-                <View style={styles.summaryRow}><Text>Shipping</Text><Text>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</Text></View>
+                {/* <View style={styles.summaryRow}><Text>Shipping</Text><Text>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</Text></View> */}
                 <View style={styles.summaryRow}><Text>Estimated Tax</Text><Text>${tax.toFixed(2)}</Text></View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}><Text style={{ fontWeight: '700' }}>Total</Text><Text style={{ fontWeight: '700' }}>${total.toFixed(2)}</Text></View>
