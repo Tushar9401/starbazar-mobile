@@ -21,6 +21,12 @@
             "NSPrivacyAccessedAPITypeReasons": [
               "CA92.1"
             ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           }
         ]
       }
@@ -28,6 +34,8 @@
     "android": {
       "package": "com.starbazar.app",
       "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
         "INTERNET",
         "ACCESS_NETWORK_STATE"
       ],
@@ -69,6 +77,12 @@
         "projectId": "d279ea53-cf87-490c-adaf-0c939f440c61"
       }
     },
-    "owner": "tushar9401"
+    "owner": "tushar9401",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d279ea53-cf87-490c-adaf-0c939f440c61"
+    }
   }
 }

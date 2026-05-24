@@ -363,24 +363,35 @@ export default function CheckoutScreen() {
 
   try {
     const items = cartArr.map(ci => ({
+      item_code: ci.item.item_code,
       name: ci.item.item_name,
       qty: ci.qty,
-      amount: getItemTotal(ci)
+      original_price: Number(ci.item.price || 0),
+      amount: getItemTotal(ci),
+      image: ci.item.image
+        ? (ci.item.image.startsWith("http")
+            ? ci.item.image
+            : `${FRAPPE_URL}${ci.item.image}`)
+        : null,
     }));
 
     const customerFirst = storedUser.firstName || formData.firstName || '';
     const customerLast = storedUser.lastName || formData.lastName || '';
     const customerEmail = storedUser.email || formData.email || '';
-
-    const res = await axios.post(`${BASE_URL}/api/create-clover-checkout/`, {
-      order_id: Date.now().toString(),
+    const orderId = Date.now().toString();
+    const payload = {
+      order_id: orderId,
+      customer_name: `${customerFirst} ${customerLast}`.trim(),
       first_name: customerFirst,
       last_name: customerLast,
       email: customerEmail,
       items,
       tax,
+      subtotal,
       total
-    });
+    };
+
+    const res = await axios.post(`${BASE_URL}/api/create-clover-checkout/`, payload);
 
     const checkoutUrl = res.data.href;
 

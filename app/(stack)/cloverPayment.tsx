@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, ActivityIndicator, Platform, Linking, Text, StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 export default function CloverPayment() {
 
   const { url } = useLocalSearchParams();
+  const [loadError, setLoadError] = useState("");
   const checkoutUrl = useMemo(() => {
     const rawUrl = Array.isArray(url) ? url[0] : url;
 
@@ -36,10 +37,38 @@ export default function CloverPayment() {
     return null;
   }
 
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{loadError}</Text>
+      </View>
+    );
+  }
+
   return (
     <WebView
       source={{ uri: checkoutUrl }}
       startInLoadingState
+      onNavigationStateChange={({ url: currentUrl }) => {
+        try {
+          const parsed = new URL(currentUrl);
+          const paymentStatus = parsed.searchParams.get("payment");
+
+          if (paymentStatus === "success") {
+            router.replace("/orders");
+          } else if (paymentStatus === "failed") {
+            router.replace("/checkout");
+          }
+        } catch {
+          // Ignore non-standard URLs emitted during the payment flow.
+        }
+      }}
+      onError={() => setLoadError("Unable to load payment checkout.")}
+      onHttpError={({ nativeEvent }) => {
+        if (nativeEvent.statusCode >= 400) {
+          setLoadError("Payment checkout returned an error.");
+        }
+      }}
       renderLoading={() => (
         <View style={styles.center}>
           <ActivityIndicator size="large" />
