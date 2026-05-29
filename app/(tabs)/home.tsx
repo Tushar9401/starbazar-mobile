@@ -95,7 +95,7 @@ function ProductCard({ p, cart, liked, onLike, onIncrease, onDecrease, onInfo })
 
       <View style={styles.productBody}>
         <View style={styles.productBodyInner}>
-          <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
+          <Text style={styles.productName} numberOfLines={2}>{p.item_code}</Text>
           <Text style={styles.productPrice}>
             ${p.price.toFixed(2)}{' '}
             <Text style={styles.productUnit}>/ {p.unit}</Text>
@@ -147,7 +147,7 @@ function OfferCard({ p, cart, onIncrease, onDecrease }) {
         )}
       </View>
       <View style={styles.offerBody}>
-        <Text style={styles.offerName} numberOfLines={2}>{p.item_name}</Text>
+        <Text style={styles.offerName} numberOfLines={2}>{p.item_code}</Text>
         <Text style={styles.originalPrice}>${p.original_price.toFixed(2)}</Text>
         <Text style={styles.offerTitle}>{p.title}</Text>
 

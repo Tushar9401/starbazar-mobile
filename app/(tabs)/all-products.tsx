@@ -62,7 +62,7 @@ function ProductCard({ p, cart, liked, onLike, onIncrease, onDecrease, onInfo })
       </TouchableOpacity>
 
       <View style={styles.productBody}>
-        <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
+        <Text style={styles.productName} numberOfLines={2}>{p.item_code}</Text>
         <Text style={styles.productPrice}>${p.price.toFixed(2)} <Text style={styles.productUnit}>{p.unit}</Text></Text>
 
         {Number(p.stock)<=0 ? (

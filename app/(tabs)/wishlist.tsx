@@ -48,7 +48,7 @@ function ProductCard({ p, cart, liked, onLike, onIncrease, onDecrease, onInfo })
 
       <View style={styles.productBody}>
         <View style={styles.productBodyInner}>
-          <Text style={styles.productName} numberOfLines={2}>{p.item_name}</Text>
+          <Text style={styles.productName} numberOfLines={2}>{p.item_code}</Text>
           <Text style={styles.productPrice}>
             ${(p.price || 0).toFixed(2)}{' '}
             <Text style={styles.productUnit}>/ {p.unit}</Text>
