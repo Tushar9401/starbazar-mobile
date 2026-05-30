@@ -79,8 +79,10 @@ export const CartProvider = ({ children }: any) => {
   };
 
   // ✅ clear entire cart (useful after order)
-  const clearCart = () => {
+  const clearCart = async () => {
     setCart({});
+    emitCart(0);
+    await AsyncStorage.removeItem("cart");
   };
 
   return (

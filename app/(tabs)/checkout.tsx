@@ -46,7 +46,7 @@ export default function CheckoutScreen() {
 
   // Step: 1 = Details (Delivery + Payment merged), 2 = Review
   const [step, setStep] = useState(1);
-  const { cart, increaseQty, decreaseQty, removeFromCart, clearCart } = useCart();
+  const { cart, increaseQty, decreaseQty, removeFromCart } = useCart();
   // const [cartObj, setCartObj] = useState({});
   const [products, setProducts] = useState({});
   const [offers, setOffers] = useState([]);

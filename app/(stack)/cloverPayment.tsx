@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, ActivityIndicator, Platform, Linking, Text, StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
 import { router, useLocalSearchParams } from "expo-router";
+import { useCart } from "../../context/CartContext";
 
 export default function CloverPayment() {
 
   const { url } = useLocalSearchParams();
+  const { clearCart } = useCart();
   const [loadError, setLoadError] = useState("");
   const checkoutUrl = useMemo(() => {
     const rawUrl = Array.isArray(url) ? url[0] : url;
@@ -49,12 +51,13 @@ export default function CloverPayment() {
     <WebView
       source={{ uri: checkoutUrl }}
       startInLoadingState
-      onNavigationStateChange={({ url: currentUrl }) => {
+      onNavigationStateChange={async ({ url: currentUrl }) => {
         try {
           const parsed = new URL(currentUrl);
           const paymentStatus = parsed.searchParams.get("payment");
 
           if (paymentStatus === "success") {
+            await clearCart();
             router.replace("/orders");
           } else if (paymentStatus === "failed") {
             router.replace("/checkout");
