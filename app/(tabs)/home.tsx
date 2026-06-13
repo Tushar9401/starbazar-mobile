@@ -179,6 +179,30 @@ function OfferCard({ p, cart, onIncrease, onDecrease }) {
   );
 }
 
+function MixMatchCard({ offer }) {
+  return (
+    <View style={styles.mixMatchCard}>
+      <View style={styles.mixMatchBadge}>
+        <Text style={styles.mixMatchBadgeText}>Mix & Match</Text>
+      </View>
+      <Text style={styles.mixMatchDeal}>
+        Buy any {Number(offer.min_qty || 0)} for ${Number(offer.bundle_price || 0).toFixed(2)}
+      </Text>
+      <Text style={styles.mixMatchSubtitle}>Eligible items:</Text>
+      <View style={styles.mixMatchItems}>
+        {(offer.combo_items || []).map(item => (
+          <View key={item.item_code} style={styles.mixMatchItem}>
+            <Text style={styles.mixMatchItemText}>✓ {item.item_code}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.mixMatchNote}>
+        Add any combination of these items to your cart from the product list.
+      </Text>
+    </View>
+  );
+}
+
 // ─── NUTRITION MODAL ──────────────────────────────────────────────────────────
 function NutritionModal({ product, visible, onClose }) {
   const [showBack, setShowBack] = useState(false);
@@ -467,6 +491,12 @@ export default function HomeScreen() {
     onDecrease: decreaseQty,
     onInfo: setSelectedNutrition,
   };
+  const singleItemOffers = specialOffers.filter(
+    offer => offer.scheme_type !== 'Combo Item'
+  );
+  const comboOffers = specialOffers.filter(
+    offer => offer.scheme_type === 'Combo Item'
+  );
 
   if (loading) {
     return (
@@ -533,10 +563,10 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🎉 Special Offers</Text>
             <FlatList
-              data={specialOffers}
+              data={singleItemOffers}
               horizontal
               showsHorizontalScrollIndicator={false}
-              keyExtractor={p => p.item_code}
+              keyExtractor={(p, index) => p.scheme_id || p.item_code || String(index)}
               contentContainerStyle={{ paddingHorizontal: 16 }}
               ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
               renderItem={({ item }) => (
@@ -551,6 +581,25 @@ export default function HomeScreen() {
               )}
             />
           </View>
+
+          {comboOffers.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🛒 Mix & Match Offers</Text>
+              <FlatList
+                data={comboOffers}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(offer, index) => offer.scheme_id || String(index)}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+                renderItem={({ item }) => (
+                  <View style={{ width: Math.min(width - 48, 320) }}>
+                    <MixMatchCard offer={item} />
+                  </View>
+                )}
+              />
+            </View>
+          )}
 
           {/* ── Shop All ── */}
           <View style={styles.section}>
@@ -799,6 +848,39 @@ const styles = StyleSheet.create({
   offerName: { fontSize: 14, fontWeight: '600', color: DARK, marginBottom: 4 },
   originalPrice: { fontSize: 16, fontWeight: '700', color: ACCENT, marginBottom: 2 },
   offerTitle: { fontSize: 12, color: OFFER_ACCENT, fontWeight: '600', marginBottom: 8 },
+
+  // Mix & Match Card
+  mixMatchCard: {
+    minHeight: 300, backgroundColor: WHITE, borderRadius: 16,
+    borderWidth: 1, borderColor: BORDER_COLOR, padding: 20, paddingTop: 58,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  },
+  mixMatchBadge: {
+    position: 'absolute', top: 16, left: 16, backgroundColor: '#137c2f',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7,
+  },
+  mixMatchBadgeText: {
+    color: WHITE, fontSize: 12, fontWeight: '800', textTransform: 'uppercase',
+  },
+  mixMatchDeal: {
+    backgroundColor: ACCENT, color: WHITE, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 17,
+    fontWeight: '900', textAlign: 'center', overflow: 'hidden', marginBottom: 16,
+  },
+  mixMatchSubtitle: {
+    color: MUTED, fontSize: 13, fontWeight: '800', marginBottom: 9,
+  },
+  mixMatchItems: { gap: 8 },
+  mixMatchItem: {
+    backgroundColor: '#f1f8f3', borderRadius: 10,
+    paddingHorizontal: 11, paddingVertical: 9,
+  },
+  mixMatchItemText: { color: DARK, fontSize: 13, fontWeight: '700' },
+  mixMatchNote: {
+    color: MUTED, fontSize: 12, lineHeight: 17,
+    marginTop: 14, textAlign: 'center',
+  },
 
   // Nutrition Modal
   modalOverlay: {

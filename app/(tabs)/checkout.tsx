@@ -246,23 +246,97 @@ export default function CheckoutScreen() {
   //   return { ...ci, item: prod };
   // });
 
-  const computeTotals = () => {
+  const pricedCart = useMemo(() => {
+    let updatedCart = cartArr.map(ci => {
+      const originalPrice = Number(ci.item.price || 0);
+      const qty = Number(ci.qty || 0);
+      return {
+        ...ci,
+        finalPrice: originalPrice,
+        lineSubtotal: originalPrice * qty,
+        isDiscounted: false,
+        offerTitle: '',
+      };
+    });
+
+    updatedCart = updatedCart.map(ci => {
+      const rule = offers.find(
+        offer =>
+          offer.scheme_type === 'Single Item' &&
+          offer.item_code === ci.item.item_code
+      );
+      if (!rule) return ci;
+
+      const qty = Number(ci.qty || 0);
+      const minQty = Number(rule.min_qty || 0);
+      const bundlePrice = Number(rule.bundle_price || 0);
+      if (minQty <= 0 || qty < minQty) return ci;
+
+      const originalPrice = Number(ci.item.price || 0);
+      const bundles = Math.floor(qty / minQty);
+      const remaining = qty % minQty;
+      const lineSubtotal = bundles * bundlePrice + remaining * originalPrice;
+
+      return {
+        ...ci,
+        finalPrice: lineSubtotal / qty,
+        lineSubtotal,
+        isDiscounted: true,
+        offerTitle: rule.title || 'Offer Applied',
+      };
+    });
+
+    offers
+      .filter(offer => offer.scheme_type === 'Combo Item')
+      .forEach(rule => {
+        const comboItemCodes = (rule.combo_items || []).map(item => item.item_code);
+        const minQty = Number(rule.min_qty || 0);
+        const bundlePrice = Number(rule.bundle_price || 0);
+        if (minQty <= 0 || bundlePrice <= 0 || comboItemCodes.length === 0) return;
+
+        const eligibleQty = updatedCart.reduce(
+          (sum, ci) =>
+            comboItemCodes.includes(ci.item.item_code)
+              ? sum + Number(ci.qty || 0)
+              : sum,
+          0
+        );
+        if (eligibleQty < minQty) return;
+
+        let discountedQtyLeft = Math.floor(eligibleQty / minQty) * minQty;
+        const offerUnitPrice = bundlePrice / minQty;
+
+        updatedCart = updatedCart.map(ci => {
+          if (!comboItemCodes.includes(ci.item.item_code) || discountedQtyLeft <= 0) {
+            return ci;
+          }
+
+          const qty = Number(ci.qty || 0);
+          const originalPrice = Number(ci.item.price || 0);
+          const discountedQty = Math.min(qty, discountedQtyLeft);
+          const normalQty = qty - discountedQty;
+          const lineSubtotal =
+            discountedQty * offerUnitPrice + normalQty * originalPrice;
+          discountedQtyLeft -= discountedQty;
+
+          return {
+            ...ci,
+            finalPrice: lineSubtotal / qty,
+            lineSubtotal,
+            isDiscounted: true,
+            offerTitle: rule.title || 'Mix & Match Offer',
+          };
+        });
+      });
+
+    return updatedCart;
+  }, [cartArr, offers]);
+
+  const { subtotal, tax, shipping, total } = useMemo(() => {
     let subtotal = 0;
     let tax = 0;
-    cartArr.forEach(ci => {
-      const rule = offers.find(o => o.item_code === ci.item.item_code);
-      const originalPrice = Number(ci.item.price || 0);
-      const qty = ci.qty || 0;
-      let lineSubtotal = originalPrice * qty;
-      if (rule) {
-        const minQty = Number(rule.min_qty || 0);
-        const offerUnit = Number(rule.price || 0);
-        if (minQty > 0 && qty >= minQty) {
-          const bundles = Math.floor(qty / minQty);
-          const remaining = qty % minQty;
-          lineSubtotal = bundles * (offerUnit * minQty) + remaining * originalPrice;
-        }
-      }
+    pricedCart.forEach(ci => {
+      const lineSubtotal = ci.lineSubtotal;
       subtotal += lineSubtotal;
       if (ci.item.food_stamp) tax += lineSubtotal * 0.02;
       else if (ci.item.non_food) tax += lineSubtotal * 0.08;
@@ -271,13 +345,7 @@ export default function CheckoutScreen() {
     const shipping = 0;
     const total = subtotal + tax + shipping;
     return { subtotal, tax, shipping, total };
-  };
-
-  // const { subtotal, tax, shipping, total } = computeTotals();
-  const { subtotal, tax, shipping, total } = useMemo(
-    () => computeTotals(),
-    [cartArr, offers]
-  );
+  }, [pricedCart]);
 
   const totalItems = cartArr.reduce((s, ci) => s + (ci.qty || 0), 0);
 
@@ -362,12 +430,12 @@ export default function CheckoutScreen() {
   setSubmitting(true);
 
   try {
-    const items = cartArr.map(ci => ({
+    const items = pricedCart.map(ci => ({
       item_code: ci.item.item_code,
       name: ci.item.item_name,
       qty: ci.qty,
       original_price: Number(ci.item.price || 0),
-      amount: getItemTotal(ci),
+      amount: ci.lineSubtotal,
       image: ci.item.image
         ? (ci.item.image.startsWith("http")
             ? ci.item.image
@@ -418,27 +486,6 @@ export default function CheckoutScreen() {
   // UI helpers (now a 2-step flow)
   const next = () => setStep(s => Math.min(2, s + 1));
   const back = () => setStep(s => Math.max(1, s - 1));
-  const getItemTotal = (ci) => {
-    const rule = offers.find(o => o.item_code === ci.item.item_code);
-
-    const price = Number(ci.item.price || 0);
-    const qty = ci.qty || 0;
-
-    if (!rule) return price * qty;
-
-    const minQty = Number(rule.min_qty || 0);
-    const offerPrice = Number(rule.price || 0);
-
-    if (qty >= minQty && minQty > 0) {
-      const bundles = Math.floor(qty / minQty);
-      const remaining = qty % minQty;
-
-      return bundles * (offerPrice * minQty) + remaining * price;
-    }
-
-    return price * qty;
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.root}>
@@ -643,7 +690,7 @@ export default function CheckoutScreen() {
               </View>
 
               <View style={styles.orderItemsList}>
-                {cartArr.map(ci => (
+                {pricedCart.map(ci => (
                   // <View key={ci.item.item_code} style={styles.orderItemRow}>
                   //   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   //     <View style={styles.thumbSmall}>{ci.item.image ? <Image source={{ uri: `${FRAPPE_URL}/${ci.item.image}` }} style={{ width: 48, height: 48 }} resizeMode="contain" /> : <Text>🍎</Text>}</View>
@@ -672,6 +719,14 @@ export default function CheckoutScreen() {
 
                       <View style={{ marginLeft: 12, flex:1 }}>
                         <Text style={{ fontWeight: '700' }}>{ci.item.item_name}</Text>
+                        {ci.isDiscounted && (
+                          <View style={styles.offerApplied}>
+                            <Text style={styles.offerAppliedTitle}>{ci.offerTitle}</Text>
+                            <Text style={styles.offerOriginalPrice}>
+                              Original: ${Number(ci.item.price || 0).toFixed(2)} each
+                            </Text>
+                          </View>
+                        )}
 
                         {/* QTY CONTROLS */}
                         <View style={{ flexDirection:'row', alignItems:'center', marginTop:6 }}>
@@ -713,8 +768,7 @@ export default function CheckoutScreen() {
                     </View>
 
                     <Text style={{ color: ACCENT, fontWeight: '700' }}>
-                      {/* ${(ci.qty * Number(ci.item.price || 0)).toFixed(2)} */}
-                      ${getItemTotal(ci).toFixed(2)}
+                      ${ci.lineSubtotal.toFixed(2)}
                     </Text>
                   </View>
                 ))}
@@ -811,6 +865,9 @@ const styles = StyleSheet.create({
   orderItemsList: { marginTop: 8 },
   orderItemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.03)' },
   thumbSmall: { width: 48, height: 48, backgroundColor: PAGE_BG, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  offerApplied: { marginTop: 4 },
+  offerAppliedTitle: { color: ACCENT, fontSize: 12, fontWeight: '700' },
+  offerOriginalPrice: { color: MUTED, fontSize: 11, marginTop: 1 },
   yValue: { minWidth: 24, textAlign: 'center', fontWeight: '700', color: DARK },
   removeText: { marginTop: 4, color: '#d64545', fontWeight: '700', fontSize: 12 },
 
