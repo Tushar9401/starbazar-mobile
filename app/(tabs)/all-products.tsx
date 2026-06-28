@@ -276,7 +276,7 @@ export default function AllProductsScreen() {
 
   // debounce search term so users have a little more time before results refresh
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(filters.searchTerm), 10000);
+    const t = setTimeout(() => setDebouncedSearch(filters.searchTerm), 5000);
     return () => clearTimeout(t);
   }, [filters.searchTerm]);
 
