@@ -274,9 +274,9 @@ export default function AllProductsScreen() {
     });
   }, [currentPage, filters.category, sortBy, debouncedSearch]);
 
-  // debounce search term so we don't refetch on every keystroke
+  // debounce search term so users have a little more time before results refresh
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(filters.searchTerm), 450);
+    const t = setTimeout(() => setDebouncedSearch(filters.searchTerm), 10000);
     return () => clearTimeout(t);
   }, [filters.searchTerm]);
 

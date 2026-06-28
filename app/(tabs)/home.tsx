@@ -515,7 +515,7 @@ export default function HomeScreen() {
       {/* Reusable header component */}
       <Header totalItems={totalItems} currentUser={currentUser} onOpenUserMenu={() => setShowUserMenu(true)} />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* ── Hero ── */}
         <ImageBackground source={require('../../assets/images/intro-1699564060.jpg')} style={styles.heroBanner} imageStyle={{ resizeMode: 'cover' }}>
           <View style={styles.heroOverlay} />
@@ -729,6 +729,7 @@ const styles = StyleSheet.create({
   heroCatTextActive: { color: ACCENT },
 
   // Main
+  scrollContent: { paddingBottom: 128 },
   mainContainer: { paddingBottom: 8 },
   section: { marginTop: 24 },
   sectionTitle: {
